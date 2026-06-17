@@ -40,6 +40,6 @@ Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/bui
 ## Support AniStream
 If you enjoy this project and want to support the development, you can scan the QR code below:
 
-<img src="https://saweria.co/widgets/qr?streamKey=a66801ea6ae67b7919ab736c46dbb0f0" alt="Donasi via Saweria" width="200" />
+![Donasi via Saweria](public/qrcode.png)
 
 Atau klik link ini: [**Donasi via Saweria**](https://saweria.co/RizalFirmansyah)
