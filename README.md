@@ -36,6 +36,8 @@ The easiest way to deploy your Next.js app is to use the [Vercel Platform](https
 Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
 
 ## Support AniStream
-If you enjoy this project and want to support the development, you can buy me a coffee here:
+If you enjoy this project and want to support the development, you can scan the QR code below:
 
-[![Donate](https://img.shields.io/badge/Donate-Saweria-blue.svg)](https://saweria.co/RizalFirmansyah)
+<img src="https://saweria.co/widgets/qr?streamKey=a66801ea6ae67b7919ab736c46dbb0f0" alt="Donasi via Saweria" width="200" />
+
+Atau klik link ini: [**Donasi via Saweria**](https://saweria.co/RizalFirmansyah)
