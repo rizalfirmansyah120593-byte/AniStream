@@ -57,6 +57,19 @@ export default function RootLayout({
           <Providers>
             {children}
           </Providers>
+          {/* Inline ad settings */}
+          <Script
+            id="atoptions"
+            strategy="afterInteractive"
+            dangerouslySetInnerHTML={{
+              __html: `atOptions = {key: 'daefcd0da8999f398d62edb6161a6a14', format: 'iframe', height: 90, width: 728, params: {}};`,
+            }}
+          />
+
+          <Script
+            src="https://alwaysmulticulturallanding.com/daefcd0da8999f398d62edb6161a6a14/invoke.js"
+            strategy="afterInteractive"
+          />
         </body>
       </html>
   );
