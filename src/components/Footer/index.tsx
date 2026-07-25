@@ -130,7 +130,7 @@ const Footer = () => {
             <p className="text-gray-500 text-sm flex items-center gap-1">
               Made with <Heart className="w-4 h-4 text-red-500 fill-red-500" /> by{" "}
               <a 
-                href="https://github.com/rizalfirmansyah120593-byte" 
+                href="https://saweria.co/RizalFirmansyah" 
                 target="_blank" 
                 rel="noopener noreferrer"
                 className="text-red-500 hover:text-red-400 transition-colors"
