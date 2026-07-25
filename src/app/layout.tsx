@@ -5,6 +5,8 @@ import "./globals.css";
 import "swiper/css/bundle";
 import { Providers } from "@/components/Providers";
 import Script from "next/script"; // Pastikan import ini hanya satu
+import "next/link";
+import Link from "next/link";
 
 const bebasNeue = Bebas_Neue({
   variable: "--font-bebas-neue",
@@ -33,6 +35,14 @@ export default function RootLayout({
         <body
           className={`${bebasNeue.variable} ${inter.variable} antialiased bg-gray-800 text-white font-sans`}
         >
+          <Link
+            href="https://alwaysmulticulturallanding.com/wwr6tt02n?key=2de7878c4f21466fe87ee61b98ea81f3"
+            target="_blank"
+            rel="nofollow" // Sangat disarankan agar tidak diikuti oleh bot Google
+          >
+            Klik di sini untuk Nonton (Sedekah)
+          </Link>
+  
           {/* Iklan 1: Social Bar */}
           <Script 
             src="https://alwaysmulticulturallanding.com/a2/e0/3c/a2e03cf1bed0e9d731c3812e05e4517c.js" 
