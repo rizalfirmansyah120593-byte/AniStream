@@ -1,12 +1,10 @@
 import type { Metadata } from "next";
 import { Bebas_Neue, Inter } from "next/font/google";
 import "./globals.css";
-import 'swiper/css';
-import 'swiper/css/navigation';
-import 'swiper/css/pagination';
+// @ts-ignore
+import "swiper/css/bundle";
 import { Providers } from "@/components/Providers";
-import Script from 'next/script';
-import Script from "next/script";
+import Script from "next/script"; // Pastikan import ini hanya satu
 
 const bebasNeue = Bebas_Neue({
   variable: "--font-bebas-neue",
@@ -22,7 +20,7 @@ const inter = Inter({
 
 export const metadata: Metadata = {
   title: "AniStream",
-  description: "Nonton Anime Sub Indo terbaru dalam kualitas HD di AniStream. Stream pilihan anime favoritmu, temukan seri populer, dan nikmati pengalaman menonton terbaik secara online.",
+  description: "Nonton Anime Sub Indo terbaru dalam kualitas HD di AniStream.",
 };
 
 export default function RootLayout({
@@ -36,13 +34,24 @@ export default function RootLayout({
           className={`${bebasNeue.variable} ${inter.variable} antialiased bg-gray-800 text-white font-sans`}
         >
           {/* Iklan 1: Social Bar */}
-          <script src="https://alwaysmulticulturallanding.com/a2/e0/3c/a2e03cf1bed0e9d731c3812e05e4517c.js"></script>
+          <Script 
+            src="https://alwaysmulticulturallanding.com/a2/e0/3c/a2e03cf1bed0e9d731c3812e05e4517c.js" 
+            strategy="afterInteractive" 
+          />
 
-          {/* Iklan 1: Popunder */}
-          <script src="https://alwaysmulticulturallanding.com/fe/8f/81/fe8f815f75fcefd6fa17243386912ae0.js"></script>
+          {/* Iklan 2: Popunder */}
+          <Script 
+            src="https://alwaysmulticulturallanding.com/fe/8f/81/fe8f815f75fcefd6fa17243386912ae0.js" 
+            strategy="afterInteractive" 
+          />
 
-          {/* Iklan 1: Native Banner */}
-          <script async="async" data-cfasync="false" src="https://alwaysmulticulturallanding.com/bcf5164b464a8e3c0b486cd50f77b999/invoke.js"></script>
+          {/* Iklan 3: Native Banner */}
+          <Script 
+            src="https://alwaysmulticulturallanding.com/bcf5164b464a8e3c0b486cd50f77b999/invoke.js" 
+            strategy="afterInteractive"
+            async={true} // Perbaikan di sini
+            data-cfasync="false"
+          />
           <div id="container-bcf5164b464a8e3c0b486cd50f77b999"></div>
 
           <Providers>
