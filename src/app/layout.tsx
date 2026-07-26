@@ -35,6 +35,24 @@ export default function RootLayout({
         <body
           className={`${bebasNeue.variable} ${inter.variable} antialiased bg-gray-800 text-white font-sans`}
         >
+          {/* Google tag (gtag.js) */}
+          <Script
+            async
+            src="https://www.googletagmanager.com/gtag/js?id=G-C4EQ753MZB"
+            strategy="afterInteractive"
+          />
+          <Script
+            id="gtag-init"
+            strategy="afterInteractive"
+            dangerouslySetInnerHTML={{
+              __html: `
+                window.dataLayer = window.dataLayer || [];
+                function gtag(){dataLayer.push(arguments);}
+                gtag('js', new Date());
+                gtag('config', 'G-C4EQ753MZB');
+              `,
+            }}
+          />
           <Link
             href="https://alwaysmulticulturallanding.com/wwr6tt02n?key=2de7878c4f21466fe87ee61b98ea81f3"
             target="_blank"
