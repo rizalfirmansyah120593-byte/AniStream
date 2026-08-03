@@ -509,14 +509,15 @@ export default function AnimeClient(props: AnimePageProps) {
                     },
                     index: number
                   ) => (
-                    <EpisodeCard
-                      key={index}
-                      episodeNumber={episode.episode}
-                      title={episode.title}
-                      description={episode.description}
-                      img={data.img}
-                      detail_eps={episode.detail_eps}
-                    />
+                    <div key={index} id={`episode-${episode.episode}`}>
+                      <EpisodeCard
+                        episodeNumber={episode.episode}
+                        title={episode.title}
+                        description={episode.description}
+                        img={data.img}
+                        detail_eps={episode.detail_eps}
+                      />
+                    </div>
                   )
                 )}
             </div>
