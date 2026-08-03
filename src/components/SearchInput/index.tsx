@@ -74,6 +74,7 @@ const SearchInput = ({ callAction, isLoading }: SearchInputProps) => {
           {/* Clear Button */}
           {query && (
             <button
+              aria-label="Hapus pencarian"
               onClick={handleClear}
               className="pr-5 text-gray-500 hover:text-white transition-colors"
             >

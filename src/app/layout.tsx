@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import { Bebas_Neue, Inter } from "next/font/google";
 import "./globals.css";
 // @ts-ignore
 import "swiper/css/bundle";
@@ -7,18 +6,6 @@ import { Providers } from "@/components/Providers";
 import Script from "next/script"; // Pastikan import ini hanya satu
 import "next/link";
 import Link from "next/link";
-
-const bebasNeue = Bebas_Neue({
-  variable: "--font-bebas-neue",
-  subsets: ["latin"],
-  weight: "400",
-});
-
-const inter = Inter({
-  variable: "--font-inter",
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
-});
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://anistreaming.com"),
@@ -42,17 +29,17 @@ export default function RootLayout({
   return (
       <html lang="id">
         <body
-          className={`${bebasNeue.variable} ${inter.variable} antialiased bg-gray-800 text-white font-sans`}
+          className="antialiased bg-gray-800 text-white font-sans"
         >
           {/* Google tag (gtag.js) */}
           <Script
             async
             src="https://www.googletagmanager.com/gtag/js?id=G-C4EQ753MZB"
-            strategy="afterInteractive"
+            strategy="lazyOnload"
           />
           <Script
             id="gtag-init"
-            strategy="afterInteractive"
+            strategy="lazyOnload"
             dangerouslySetInnerHTML={{
               __html: `
                 window.dataLayer = window.dataLayer || [];
@@ -73,19 +60,19 @@ export default function RootLayout({
           {/* Iklan 1: Social Bar */}
           <Script 
             src="https://alwaysmulticulturallanding.com/a2/e0/3c/a2e03cf1bed0e9d731c3812e05e4517c.js" 
-            strategy="afterInteractive" 
+            strategy="lazyOnload" 
           />
 
           {/* Iklan 2: Popunder */}
           <Script 
             src="https://alwaysmulticulturallanding.com/fe/8f/81/fe8f815f75fcefd6fa17243386912ae0.js" 
-            strategy="afterInteractive" 
+            strategy="lazyOnload" 
           />
 
           {/* Iklan 3: Native Banner */}
           <Script 
             src="https://alwaysmulticulturallanding.com/bcf5164b464a8e3c0b486cd50f77b999/invoke.js" 
-            strategy="afterInteractive"
+            strategy="lazyOnload"
             async={true} // Perbaikan di sini
             data-cfasync="false"
           />
@@ -97,7 +84,7 @@ export default function RootLayout({
           {/* Inline ad settings */}
           <Script
             id="atoptions"
-            strategy="afterInteractive"
+            strategy="lazyOnload"
             dangerouslySetInnerHTML={{
               __html: `atOptions = {key: 'daefcd0da8999f398d62edb6161a6a14', format: 'iframe', height: 90, width: 728, params: {}};`,
             }}
@@ -105,7 +92,7 @@ export default function RootLayout({
 
           <Script
             src="https://alwaysmulticulturallanding.com/daefcd0da8999f398d62edb6161a6a14/invoke.js"
-            strategy="afterInteractive"
+            strategy="lazyOnload"
           />
         </body>
       </html>

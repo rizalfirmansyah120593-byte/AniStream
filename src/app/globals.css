@@ -1,5 +1,10 @@
 @import "tailwindcss";
 
+:root {
+  --font-inter: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-bebas-neue: Impact, Haettenschweiler, "Arial Narrow Bold", sans-serif;
+}
+
 /* Netflix-style typography */
 html, body {
   font-family: var(--font-inter), ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;

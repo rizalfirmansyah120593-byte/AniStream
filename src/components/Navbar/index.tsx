@@ -148,12 +148,13 @@ const Navbar = () => {
 
           {/* Right Icons */}
           <div className='flex items-center gap-3 md:gap-5'>
-            <Link href="/search" className='text-white hover:text-gray-300 transition-colors'>
+            <Link href="/search" aria-label="Cari anime" className='text-white hover:text-gray-300 transition-colors'>
               <Search className='w-5 h-5' />
             </Link>
             {/* Notification Button & Menu */}
             <div className='hidden md:block relative' ref={notificationRef}>
-              <button 
+              <button
+                aria-label="Buka notifikasi" 
                 onClick={() => {
                   setIsNotificationOpen(!isNotificationOpen);
                   if (!isNotificationOpen) setHasNewNotifications(false);
