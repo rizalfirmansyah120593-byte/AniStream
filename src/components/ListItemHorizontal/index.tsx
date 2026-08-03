@@ -182,8 +182,9 @@ const ListItemHorizontal = (props: ListItemHorizontalProps) => {
                     {/* Image Container */}
                     <div className="aspect-[2/3] rounded-md overflow-hidden relative bg-gray-900 border-2 border-transparent group-hover:border-white/30 transition-all duration-300">
                       <img
-                        src={anime.img}
+                        src={anime.img || '/not_found.png'}
                         alt={anime.alt}
+                        onError={(event) => { event.currentTarget.src = '/not_found.png'; }}
                         className="object-cover w-full h-full transform group-hover:scale-105 transition-transform duration-500"
                         loading="lazy"
                       />

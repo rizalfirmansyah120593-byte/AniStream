@@ -141,8 +141,9 @@ const EpisodeCard: React.FC<EpisodeCardProps> = ({
           {/* Thumbnail */}
           <div className="relative w-full sm:w-32 h-24 sm:h-20 flex-shrink-0 rounded overflow-hidden">
             <img 
-              src={img} 
+              src={img || '/not_found.png'} 
               alt={title}
+              onError={(event) => { event.currentTarget.src = '/not_found.png'; }}
               className="w-full h-full object-cover"
             />
             {/* Play overlay on hover */}

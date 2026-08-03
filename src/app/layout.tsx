@@ -21,8 +21,17 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "AniStream",
-  description: "Nonton Anime Sub Indo terbaru dalam kualitas HD di AniStream.",
+  metadataBase: new URL("https://anistreaming.com"),
+  title: { default: "AniStreaming - Nonton Anime Sub Indo", template: "%s | AniStreaming" },
+  description: "Nonton anime subtitle Indonesia terbaru dengan informasi episode, genre, jadwal tayang, dan sinopsis di AniStreaming.",
+  applicationName: "AniStreaming",
+  alternates: { canonical: "/" },
+  openGraph: {
+    type: "website", locale: "id_ID", url: "https://anistreaming.com",
+    siteName: "AniStreaming", title: "AniStreaming - Nonton Anime Sub Indo",
+    description: "Koleksi anime subtitle Indonesia terbaru dan populer.",
+  },
+  robots: { index: true, follow: true, googleBot: { index: true, follow: true } },
 };
 
 export default function RootLayout({
@@ -31,7 +40,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-      <html lang="en">
+      <html lang="id">
         <body
           className={`${bebasNeue.variable} ${inter.variable} antialiased bg-gray-800 text-white font-sans`}
         >

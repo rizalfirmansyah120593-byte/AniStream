@@ -203,6 +203,7 @@ const Navbar = () => {
                               <Image
                                 src={anime.img}
                                 alt={anime.alt || anime.title}
+                                onError={(event) => { event.currentTarget.src = '/not_found.png'; }}
                                 fill
                                 className='object-cover group-hover:scale-105 transition-transform'
                                 sizes='56px'
