@@ -79,9 +79,11 @@ const TypeAnimeList = (props: TypeAnimeListProps) => {
   const data = useQuery({
     queryKey: [queryKey],
     queryFn: async () => {
-      const { data } = await axios.get(apifetch);
+      const { data } = await axios.get(apifetch, { timeout: 10000 });
       return data;
     },
+    retry: 1,
+    staleTime: 60 * 1000,
   });
 
   // Initialize and listen for My List updates
@@ -273,6 +275,11 @@ const TypeAnimeList = (props: TypeAnimeListProps) => {
             </SwiperSlide>
           )}
         </Swiper>
+        {data.isError && (
+          <p className="mt-4 text-center text-sm text-gray-400">
+            Daftar anime sedang tidak dapat dimuat. Silakan coba lagi nanti.
+          </p>
+        )}
       </div>
     </div>
   );

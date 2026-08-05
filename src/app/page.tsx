@@ -60,7 +60,7 @@ interface Genres {
 
 async function fetchNewAnime() {
   const { data } = await axios.get(
-    `${API_URL}/new-anime`
+    `${API_URL}/new-anime`, { timeout: 10000 }
   );
   return data;
 }
@@ -68,7 +68,7 @@ async function fetchNewAnime() {
 // /genres
 async function fetchGenres() {
   const { data } = await axios.get(
-    `${API_URL}/genres`
+    `${API_URL}/genres`, { timeout: 10000 }
   );
   return data;
 }
@@ -158,15 +158,15 @@ export default function Home() {
   const newAnime = useQuery({
     queryKey: ["new-anime"],
     queryFn: fetchNewAnime,
-    retry: 3,
-    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 10000),
+    retry: 1,
+    retryDelay: 1000,
   });
 
   const genres = useQuery({
     queryKey: ["genres"],
     queryFn: fetchGenres,
-    retry: 3,
-    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 10000),
+    retry: 1,
+    retryDelay: 1000,
   });
 
   // Handle slide change to track active slide
@@ -228,7 +228,7 @@ export default function Home() {
           className="hero-swiper"
           onSlideChange={handleSlideChange}
         >
-          {newAnime.data.data.slice(0, 8).map((anime: Anime, index: number) => {
+          {(newAnime.data?.data || []).slice(0, 8).map((anime: Anime, index: number) => {
             const slug = getAnimeSlug(anime);
             const trailer = getTrailerBySlug(slug);
             const isActiveSlide = activeSlideIndex === index;
@@ -390,7 +390,7 @@ export default function Home() {
       {/* Mixed Genre & Type Anime Sections */}
       <div className="flex flex-col gap-4 my-4">
         {!genres.isLoading && (() => {
-          const genreList = genres.data.data;
+          const genreList = genres.data?.data || [];
           const typeAnimeConfigs = [
             { title: "TV Series", typeValue: "tv" as const, queryKey: "type-tv" },
             { title: "OVA", typeValue: "ova" as const, queryKey: "type-ova" },

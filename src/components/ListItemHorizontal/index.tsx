@@ -69,9 +69,11 @@ const ListItemHorizontal = (props: ListItemHorizontalProps) => {
   const data = useQuery({
     queryKey: [queryKey || Math.random().toString(36).substring(2, 15)],
     queryFn: async () => {
-      const { data } = await axios.get(apifetch);
+      const { data } = await axios.get(apifetch, { timeout: 10000 });
       return data;
     },
+    retry: 1,
+    staleTime: 60 * 1000,
   });
 
   // Initialize and listen for My List updates
@@ -160,7 +162,7 @@ const ListItemHorizontal = (props: ListItemHorizontalProps) => {
       >
         {(placeholder || data.isLoading
           ? Array.from({ length: 10 })
-          : data.data.data
+          : data.data?.data || []
         ).map((anime: Anime, index: number) => {
           return (
             <SwiperSlide key={index}>
@@ -254,6 +256,11 @@ const ListItemHorizontal = (props: ListItemHorizontalProps) => {
             </SwiperSlide>
           );
         })}
+        {data.isError && !placeholder && (
+          <p className="mt-4 text-center text-sm text-gray-400">
+            Daftar anime sedang tidak dapat dimuat.
+          </p>
+        )}
         
         {/* See More Card */}
         {seeAllLink && (

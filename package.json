@@ -16,7 +16,7 @@
     "next": "^16.1.1",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
-    "swiper": "^11.2.6"
+    "swiper": "14.0.7"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
@@ -29,5 +29,8 @@
     "eslint-config-next": "^16.1.1",
     "tailwindcss": "^4",
     "typescript": "^5"
+  },
+  "overrides": {
+    "brace-expansion": "5.0.9"
   }
 }
