@@ -3,6 +3,7 @@ import "./globals.css";
 // @ts-ignore
 import "swiper/css/bundle";
 import { Providers } from "@/components/Providers";
+import { AdsterraSiteScripts } from "@/components/Ads/AdsterraAd";
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://anistreaming.com"),
@@ -31,6 +32,7 @@ export default function RootLayout({
           <Providers>
             {children}
           </Providers>
+          <AdsterraSiteScripts />
         </body>
       </html>
   );

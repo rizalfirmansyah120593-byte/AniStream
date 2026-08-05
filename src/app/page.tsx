@@ -17,6 +17,7 @@ import { X, Play, Info, Plus, Check, Star, Calendar, Film, Clock, Volume2, Volum
 import { getTrailerBySlug, getYouTubeEmbedUrl } from "@/utils/animeTrailers";
 import { isInMyList, toggleMyList, getMyList } from "@/utils/myList";
 import { API_URL } from '@/utils/config';
+import { AdsterraNative, AdsterraBanner } from '@/components/Ads/AdsterraAd';
 
 // Check if banner should be shown (once per day)
 const BANNER_STORAGE_KEY = 'AniStream_banner_last_shown';
@@ -370,6 +371,9 @@ export default function Home() {
       </div>
 
       <div className="flex flex-col gap-4 my-4">
+        <AdsterraNative />
+        <div className="hidden md:block"><AdsterraBanner size="728x90" /></div>
+        <div className="md:hidden"><AdsterraBanner size="320x50" /></div>
         <ListItemHorizontal 
           title="On Going Anime" 
           apifetch={`${API_URL}/ongoing-anime`} 
