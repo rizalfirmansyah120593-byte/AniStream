@@ -26,9 +26,7 @@ export default function RootLayout({
 }>) {
   return (
       <html lang="id">
-        <body
-          className="antialiased bg-gray-800 text-white font-sans"
-        >
+        <body className="antialiased bg-gray-800 text-white font-sans overflow-x-hidden">
           <Providers>
             {children}
           </Providers>

@@ -117,12 +117,12 @@ const Navbar = () => {
           ? 'bg-black/95 backdrop-blur-md shadow-lg' 
           : 'bg-gradient-to-b from-black/80 via-black/40 to-transparent'
       }`}>
-        <div className='flex justify-between items-center px-4 md:px-12 py-3'>
+        <div className='flex min-w-0 justify-between items-center px-4 py-3 md:px-12'>
           {/* Logo & Menu */}
-          <div className='flex items-center gap-8'>
-            <Link href="/" className='flex items-center gap-2 group'>
+          <div className='flex min-w-0 items-center gap-4 md:gap-8'>
+            <Link href="/" className='flex min-w-0 items-center gap-2 group'>
               <Play className='text-red-600 fill-red-600 w-7 h-7 md:w-8 md:h-8 group-hover:scale-110 transition-transform' />
-              <span className='text-red-600 font-heading text-xl md:text-3xl tracking-wider group-hover:text-red-500 transition-colors'>
+              <span className='text-red-600 font-heading text-lg sm:text-xl md:text-3xl tracking-wide truncate group-hover:text-red-500 transition-colors'>
                 AniStream
               </span>
             </Link>
@@ -147,7 +147,7 @@ const Navbar = () => {
           </div>
 
           {/* Right Icons */}
-          <div className='flex items-center gap-3 md:gap-5'>
+          <div className='flex flex-shrink-0 items-center gap-3 md:gap-5'>
             <Link href="/search" aria-label="Cari anime" className='text-white hover:text-gray-300 transition-colors'>
               <Search className='w-5 h-5' />
             </Link>
@@ -256,6 +256,7 @@ const Navbar = () => {
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
               className='md:hidden text-white hover:text-gray-300 transition-colors p-1'
               aria-label='Toggle menu'
+              aria-expanded={isMobileMenuOpen}
             >
               {isMobileMenuOpen ? (
                 <X className='w-6 h-6' />
@@ -277,7 +278,7 @@ const Navbar = () => {
 
       {/* Mobile Menu Drawer */}
       <div 
-        className={`fixed top-0 right-0 h-full w-72 bg-gray-900 z-50 md:hidden transform transition-transform duration-300 ease-out ${
+        className={`fixed top-0 right-0 h-full w-[min(18rem,85vw)] bg-gray-900 z-50 md:hidden transform transition-transform duration-300 ease-out ${
           isMobileMenuOpen ? 'translate-x-0' : 'translate-x-full'
         }`}
       >
