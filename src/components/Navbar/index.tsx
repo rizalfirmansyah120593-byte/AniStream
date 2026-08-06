@@ -112,12 +112,8 @@ const Navbar = () => {
 
   return (
     <>
-      <nav className={`fixed top-0 w-full z-50 transition-all duration-500 ${
-        isScrolled || isMobileMenuOpen
-          ? 'bg-black/95 backdrop-blur-md shadow-lg' 
-          : 'bg-gradient-to-b from-black/80 via-black/40 to-transparent'
-      }`}>
-        <div className='flex min-w-0 justify-between items-center px-4 py-3 md:px-12'>
+      <nav className="fixed top-0 w-full z-50 bg-[#050505]/98 backdrop-blur-md shadow-lg border-b border-white/10">
+        <div className='flex min-w-0 justify-between items-center px-4 py-4 md:px-12'>
           {/* Logo & Menu */}
           <div className='flex min-w-0 items-center gap-4 md:gap-8'>
             <Link href="/" className='flex min-w-0 items-center gap-2 group'>
