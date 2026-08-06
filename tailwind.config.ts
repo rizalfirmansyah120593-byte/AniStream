@@ -5,7 +5,7 @@ const config: Config = {
     extend: {
       fontFamily: {
         sans: ["var(--font-inter)", "system-ui", "sans-serif"],
-        heading: ["var(--font-bebas-neue)", "system-ui", "sans-serif"],
+        heading: ["var(--font-heading)", "system-ui", "sans-serif"],
       },
       keyframes: {
         marquee: {

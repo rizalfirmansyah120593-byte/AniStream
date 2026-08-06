@@ -2,12 +2,13 @@
 
 :root {
   --font-inter: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  --font-bebas-neue: Impact, Haettenschweiler, "Arial Narrow Bold", sans-serif;
+  --font-heading: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
 
-/* Netflix-style typography */
+/* Clear, readable typography across every page */
 html, body {
   font-family: var(--font-inter), ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  line-height: 1.5;
 }
 
 /* Apply Inter to all text elements */
@@ -15,12 +16,12 @@ p, span, a, li, div, input, button, label, td, th {
   font-family: inherit;
 }
 
-/* Headings use Bebas Neue (Netflix-like) */
+/* Headings use a strong sans-serif instead of a condensed display font. */
 h1, h2, h3, h4, h5, h6,
 .font-heading {
-  font-family: var(--font-bebas-neue), ui-sans-serif, system-ui, sans-serif !important;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
+  font-family: var(--font-heading), ui-sans-serif, system-ui, sans-serif !important;
+  font-weight: 700;
+  letter-spacing: 0.015em;
 }
 
 /* ===== Custom Scrollbar - Netflix Style ===== */
