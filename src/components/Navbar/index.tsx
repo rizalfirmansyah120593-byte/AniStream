@@ -1,10 +1,11 @@
 'use client'
 import React, { useState, useEffect, useRef } from 'react'
-import { UserRound, Bookmark, Search, Play, Bell, Menu, X, Home, Film, Heart, Calendar, Tv, Compass, Loader2 } from 'lucide-react';
+import { UserRound, Bookmark, Search, Play, Bell, Menu, X, Home, Film, Heart, Calendar, Tv, Compass, Loader2, Languages } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import Image from 'next/image';
 import { API_URL } from '@/utils/config';
+import { LANGUAGES, useLanguage } from '@/components/LanguageProvider';
 
 interface NotificationAnime {
   img: string;
@@ -35,6 +36,7 @@ const Navbar = () => {
   const [hasNewNotifications, setHasNewNotifications] = useState(true);
   const notificationRef = useRef<HTMLDivElement>(null);
   const pathname = usePathname();
+  const { language, setLanguage, t } = useLanguage();
 
   useEffect(() => {
     const handleScroll = () => {
@@ -97,12 +99,12 @@ const Navbar = () => {
   }, [isMobileMenuOpen]);
 
   const navLinks = [
-    { href: '/', label: 'Home', icon: Home },
-    { href: '/popular', label: 'Browse', icon: Compass },
-    { href: '/genres', label: 'Genres', icon: Film },
-    { href: '/type', label: 'Type', icon: Tv },
-    { href: '/schedule', label: 'Schedule', icon: Calendar },
-    { href: '/profile', label: 'My List', icon: Heart },
+    { href: '/', label: t('home'), icon: Home },
+    { href: '/popular', label: t('browse'), icon: Compass },
+    { href: '/genres', label: t('genres'), icon: Film },
+    { href: '/type', label: t('type'), icon: Tv },
+    { href: '/schedule', label: t('schedule'), icon: Calendar },
+    { href: '/profile', label: t('myList'), icon: Heart },
   ];
 
   const isActiveLink = (href: string) => {
@@ -144,7 +146,22 @@ const Navbar = () => {
 
           {/* Right Icons */}
           <div className='flex flex-shrink-0 items-center gap-3 md:gap-5'>
-            <Link href="/search" aria-label="Cari anime" className='text-white hover:text-gray-300 transition-colors'>
+            <label className="flex items-center gap-1.5 text-gray-300" title={t('language')}>
+              <Languages className="w-5 h-5" aria-hidden="true" />
+              <select
+                value={language}
+                onChange={(event) => setLanguage(event.target.value as typeof language)}
+                aria-label={t('language')}
+                className="max-w-[5.5rem] cursor-pointer rounded-md border border-white/20 bg-gray-900 px-1.5 py-1 text-xs font-medium text-white outline-none focus:border-red-500"
+              >
+                {LANGUAGES.map((item) => (
+                  <option key={item.code} value={item.code} className="bg-gray-900 text-white">
+                    {item.short} — {item.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <Link href="/search" aria-label={t('search')} className='text-white hover:text-gray-300 transition-colors'>
               <Search className='w-5 h-5' />
             </Link>
             {/* Notification Button & Menu */}
@@ -170,7 +187,7 @@ const Navbar = () => {
                   <div className='flex items-center justify-between px-4 py-3 border-b border-gray-800 bg-gray-900/95'>
                     <h3 className='text-white font-semibold flex items-center gap-2'>
                       <Bell className='w-4 h-4 text-red-500' />
-                      Update Terbaru
+                      {t('latest')}
                     </h3>
                     <Link 
                       href="/latest" 
@@ -280,7 +297,7 @@ const Navbar = () => {
       >
         {/* Menu Header */}
         <div className='flex items-center justify-between p-4 border-b border-gray-800'>
-          <span className='text-red-600 font-heading text-xl tracking-wider'>MENU</span>
+          <span className='text-red-600 font-heading text-xl tracking-wider'>{t('menu')}</span>
           <button 
             onClick={() => setIsMobileMenuOpen(false)}
             className='text-gray-400 hover:text-white transition-colors p-1'
@@ -325,7 +342,7 @@ const Navbar = () => {
                 className='flex items-center gap-3 px-4 py-3 rounded-lg text-gray-300 hover:bg-gray-800 hover:text-white transition-all'
               >
                 <Search className='w-5 h-5' />
-                <span className='font-medium'>Search</span>
+                <span className='font-medium'>{t('search')}</span>
               </Link>
             </li>
             <li>
@@ -334,7 +351,7 @@ const Navbar = () => {
                 className='flex items-center gap-3 px-4 py-3 rounded-lg text-gray-300 hover:bg-gray-800 hover:text-white transition-all w-full'
               >
                 <Bell className='w-5 h-5' />
-                <span className='font-medium'>Update Terbaru</span>
+                <span className='font-medium'>{t('latest')}</span>
                 {hasNewNotifications && (
                   <span className='ml-auto w-2 h-2 bg-red-600 rounded-full animate-pulse'></span>
                 )}
@@ -346,7 +363,7 @@ const Navbar = () => {
                 className='flex items-center gap-3 px-4 py-3 rounded-lg text-gray-300 hover:bg-gray-800 hover:text-white transition-all w-full'
               >
                 <Bookmark className='w-5 h-5' />
-                <span className='font-medium'>My List</span>
+                <span className='font-medium'>{t('myList')}</span>
               </Link>
             </li>
           </ul>
