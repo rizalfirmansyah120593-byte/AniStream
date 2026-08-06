@@ -127,17 +127,25 @@ const Footer = () => {
             <p className="text-gray-500 text-sm text-center sm:text-left">
               © {currentYear} AniStream. All rights reserved.
             </p>
-            <p className="text-gray-500 text-sm flex items-center gap-1">
-              Made with <Heart className="w-4 h-4 text-red-500 fill-red-500" /> by{" "}
-              <a 
-                href="https://saweria.co/RizalFirmansyah" 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="text-red-500 hover:text-red-400 transition-colors"
-              >
-                Rizal Firmansyah
-              </a>
-            </p>
+            <div className="text-center sm:text-right">
+              <p className="text-gray-400 text-sm">
+                Dukung AniStream agar terus berkembang dan menemani lebih banyak pecinta anime.
+              </p>
+              <p className="mt-2 text-gray-500 text-sm flex items-center justify-center sm:justify-end gap-1">
+                Made with <Heart className="w-4 h-4 text-red-500 fill-red-500" /> by{" "}
+                <a
+                  href="https://saweria.co/RizalFirmansyah"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-red-500 hover:text-red-400 transition-colors"
+                >
+                  Rizal Firmansyah
+                </a>
+              </p>
+              <p className="mt-2 max-w-sm text-xs italic leading-relaxed text-gray-600">
+                “Bagaimana bisa aku takut miskin, sedangkan aku adalah hamba dari sang maha kaya.”
+              </p>
+            </div>
           </div>
           
           {/* Disclaimer */}
