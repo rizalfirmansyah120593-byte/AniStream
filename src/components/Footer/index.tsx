@@ -20,10 +20,10 @@ const Footer = () => {
       { label: "OVA", href: "/genres/ova" },
     ],
     help: [
-      { label: "FAQ", href: "#" },
-      { label: "Contact Us", href: "#" },
-      { label: "Terms of Service", href: "#" },
-      { label: "Privacy Policy", href: "#" },
+      { label: "FAQ", href: "/faq" },
+      { label: "Contact Us", href: "/contact" },
+      { label: "Terms of Service", href: "/terms" },
+      { label: "Privacy Policy", href: "/privacy" },
     ],
   };
 

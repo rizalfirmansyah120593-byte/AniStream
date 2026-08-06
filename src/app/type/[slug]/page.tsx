@@ -77,6 +77,14 @@ async function fetchTypeAnime(type: string, page: number): Promise<TypeResponse>
   return data;
 }
 
+function normalizeType(type: string | undefined): string {
+  const normalized = (type || "").trim().toLowerCase();
+  if (normalized === "tv series" || normalized === "series") return "tv";
+  if (normalized === "specials") return "special";
+  if (normalized === "movies") return "movie";
+  return normalized;
+}
+
 const TypeDetailPage = () => {
   const params = useParams();
   const slug = params.slug as string;
@@ -103,7 +111,9 @@ const TypeDetailPage = () => {
   });
 
   // Flatten all pages data
-  const allAnime = data?.pages.flatMap((page) => page.data) || [];
+  const allAnime = data?.pages
+    .flatMap((page) => page.data)
+    .filter((anime) => normalizeType(anime.type) === slug.toLowerCase()) || [];
   const totalItems = data?.pages[0]?.total_items || 0;
   const totalPages = data?.pages[0]?.total_page || 0;
   const currentPage = data?.pages.length || 0;
