@@ -47,7 +47,16 @@ export default async function AnimePage({ params }: { params: Promise<{ id: stri
   const description = (anime.description || anime.descriptions?.[0] || `Informasi ${title} dan daftar episode subtitle Indonesia.`).slice(0, 500);
   const genres = (anime.genres || []).map((genre) => typeof genre === "string" ? genre : genre.title || genre.name || "").filter(Boolean);
   const canonical = `${SITE_URL}/anime/${encodeURIComponent(id)}`;
-  const episodes = (anime.episodes || []).filter((episode) => episode.episode != null);
+  const episodes = (anime.episodes || [])
+    .filter((episode) => episode.episode != null)
+    .sort((a, b) => {
+      const episodeA = Number(a.episode);
+      const episodeB = Number(b.episode);
+
+      if (Number.isNaN(episodeA)) return 1;
+      if (Number.isNaN(episodeB)) return -1;
+      return episodeB - episodeA;
+    });
   const schema = {
     "@context": "https://schema.org", "@type": "TVSeries", name: title,
     alternateName: [anime.english_title, anime.japanese_title].filter(Boolean), description,

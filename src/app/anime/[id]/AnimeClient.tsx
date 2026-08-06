@@ -250,8 +250,9 @@ export default function AnimeClient(props: AnimePageProps) {
   const handlePlayLatest = useCallback(async () => {
     if (!data || !data.episodes || data.episodes.length === 0) return;
     
-    const latestEpisode = data.episodes.slice().sort((a: { episode: number }, b: { episode: number }) =>
-      Number(b.episode) - Number(a.episode)
+    const latestEpisode = data.episodes.slice().sort(
+      (a: { episode: number | string }, b: { episode: number | string }) =>
+        Number(b.episode) - Number(a.episode)
     )[0];
     
     try {
@@ -497,8 +498,17 @@ export default function AnimeClient(props: AnimePageProps) {
           {/* Episode Grid or Empty State */}
           {data.episodes && data.episodes.length > 0 ? (
             <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2 sm:gap-3 md:gap-4">
-              {data.episodes.slice().sort((a: { episode: number }, b: { episode: number }) =>
-                sortOrder === 'desc' ? Number(b.episode) - Number(a.episode) : Number(a.episode) - Number(b.episode)
+              {data.episodes.slice().sort(
+                (a: { episode: number | string }, b: { episode: number | string }) => {
+                  const episodeA = Number(a.episode);
+                  const episodeB = Number(b.episode);
+
+                  // Keep special episodes after numbered episodes in both directions.
+                  if (Number.isNaN(episodeA)) return 1;
+                  if (Number.isNaN(episodeB)) return -1;
+
+                  return sortOrder === 'desc' ? episodeB - episodeA : episodeA - episodeB;
+                }
               ).map(
                   (
                     episode: {

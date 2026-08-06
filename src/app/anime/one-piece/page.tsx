@@ -129,7 +129,11 @@ const OnePiecePage = () => {
   const handlePlayLatest = useCallback(async () => {
     if (!data || !data.episodes || data.episodes.length === 0) return;
     
-    const latestEpisode = data.episodes[data.episodes.length - 1];
+    const latestEpisode = data.episodes
+      .slice()
+      .sort((a: { episode: number | string }, b: { episode: number | string }) =>
+        Number(b.episode) - Number(a.episode)
+      )[0];
     
     try {
       setVideoUrl(null);
@@ -174,9 +178,18 @@ const OnePiecePage = () => {
   const getFilteredEpisodes = () => {
     if (!data || !data.episodes) return [];
     
-    let episodes = sortOrder === 'desc' 
-      ? data.episodes.slice().reverse() 
-      : data.episodes.slice();
+    let episodes = data.episodes.slice().sort(
+      (a: { episode: number | string }, b: { episode: number | string }) => {
+        const episodeA = Number(a.episode);
+        const episodeB = Number(b.episode);
+
+        // Keep special episodes after numbered episodes in both directions.
+        if (Number.isNaN(episodeA)) return 1;
+        if (Number.isNaN(episodeB)) return -1;
+
+        return sortOrder === 'desc' ? episodeB - episodeA : episodeA - episodeB;
+      }
+    );
     
     if (selectedArc) {
       const arc = majorArcs.find(a => a.name === selectedArc);
