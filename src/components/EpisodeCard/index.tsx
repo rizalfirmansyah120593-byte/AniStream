@@ -5,7 +5,6 @@ import axios from "axios";
 import { X, Play, Clock, Server, Loader2, MonitorPlay } from "lucide-react";
 import groupByProvider from "@/utils/groupByProvider";
 import { API_URL } from '@/utils/config';
-import PreRollAdGate from "@/components/PreRollAdGate";
 
 interface EpisodeCardProps {
   episodeNumber: number;
@@ -221,9 +220,10 @@ const EpisodeCard: React.FC<EpisodeCardProps> = ({
               {/* Video Player */}
               <div className="relative aspect-video bg-black overflow-hidden">
                 {videoUrl && !isLoadingVideo ? (
-                  <PreRollAdGate
-                    key={videoUrl}
-                    videoUrl={videoUrl}
+                  <iframe
+                    src={videoUrl}
+                    className="w-full h-full"
+                    allowFullScreen
                     title="Video Player"
                   />
                 ) : (

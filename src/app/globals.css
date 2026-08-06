@@ -11,6 +11,10 @@ html, body {
   line-height: 1.5;
 }
 
+html {
+  scroll-padding-top: 5rem;
+}
+
 /* Apply Inter to all text elements */
 p, span, a, li, div, input, button, label, td, th {
   font-family: inherit;

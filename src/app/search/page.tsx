@@ -50,7 +50,7 @@ const SearchPage = () => {
     <div className="min-h-screen bg-black">
       <Navbar />
       
-      <div className="pt-16">
+      <div className="pt-20 sm:pt-24">
         {/* Search Input Section */}
         <SearchInput callAction={handleSearch} isLoading={isLoading} />
         

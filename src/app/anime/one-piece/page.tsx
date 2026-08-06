@@ -14,7 +14,6 @@ import { Play, Plus, Check, ThumbsUp, Volume2, VolumeX, X, ArrowUp, ArrowDown, A
 import { isInMyList, toggleMyList, isAnimeLiked, toggleLikeAnime } from "@/utils/myList";
 import groupByProvider from "@/utils/groupByProvider";
 import { API_URL } from '@/utils/config';
-import PreRollAdGate from "@/components/PreRollAdGate";
 
 async function fetchAnimeDetail() {
   const { data } = await axios.get(
@@ -641,9 +640,10 @@ const OnePiecePage = () => {
             {/* Video Player */}
             <div className="relative aspect-video bg-black sm:rounded-t-xl overflow-hidden">
               {videoUrl ? (
-                <PreRollAdGate
-                  key={videoUrl}
-                  videoUrl={videoUrl}
+                <iframe
+                  src={videoUrl}
+                  className="w-full h-full"
+                  allowFullScreen
                   title="Video Player"
                 />
               ) : (

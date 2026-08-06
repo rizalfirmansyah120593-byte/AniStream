@@ -15,7 +15,6 @@ import { Play, Plus, Check, ThumbsUp, Info, Volume2, VolumeX, X, ArrowUpDown, Ar
 import { isInMyList, toggleMyList, isAnimeLiked, toggleLikeAnime } from "@/utils/myList";
 import groupByProvider from "@/utils/groupByProvider";
 import { API_URL } from '@/utils/config';
-import PreRollAdGate from "@/components/PreRollAdGate";
 
 async function fetchAnimeDetail(id: string) {
   const { data } = await axios.get(
@@ -753,9 +752,10 @@ export default function AnimeClient(props: AnimePageProps) {
               {/* Video Player */}
               <div className="relative aspect-video bg-black overflow-hidden">
                 {videoUrl && !isLoadingVideo ? (
-                  <PreRollAdGate
-                    key={videoUrl}
-                    videoUrl={videoUrl}
+                  <iframe
+                    src={videoUrl}
+                    className="w-full h-full"
+                    allowFullScreen
                     title="Video Player"
                   />
                 ) : (
