@@ -25,14 +25,28 @@ const STATIC_ROUTES = [
   "/schedule",
   "/genres",
   "/type",
+  "/type/tv",
+  "/type/ova",
+  "/type/ona",
+  "/type/special",
+  "/type/movie",
   "/category/ongoing",
   "/category/completed",
+  "/anime/one-piece",
+  "/faq",
+  "/contact",
+  "/terms",
+  "/privacy",
 ];
 
+function normalizeSlug(value: string) {
+  return value.replace(/^\/+|\/+$/g, "");
+}
+
 function slugOf(anime: Anime) {
-  if (anime.slug) return anime.slug;
+  if (anime.slug) return normalizeSlug(anime.slug);
   const raw = anime.detail_url || anime.link || "";
-  return raw.split("?")[0].split("/").filter(Boolean).pop() || "";
+  return normalizeSlug(raw.split("?")[0].split("/").filter(Boolean).pop() || "");
 }
 
 function addSlugs(page: PaginatedResponse | null, slugs: Set<string>) {
@@ -122,7 +136,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const anime = await getAnimeUrls();
   const entries = [
     ...STATIC_ROUTES.map(path => ({ url: `${SITE_URL}${path}`, lastModified: now, changeFrequency: "daily" as const, priority: path === "" ? 1 : 0.7 })),
-    ...anime.map(slug => ({ url: `${SITE_URL}/anime/${encodeURIComponent(slug)}`, lastModified: now, changeFrequency: "daily" as const, priority: 0.8 })),
+    ...anime.map(slug => ({ url: `${SITE_URL}/anime/${encodeURIComponent(slug)}`, lastModified: now, changeFrequency: "daily" as const, priority: slug === "one-piece" ? 0.95 : 0.8 })),
   ];
 
   // Defensive deduplication keeps the sitemap valid when an anime appears in

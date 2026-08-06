@@ -29,11 +29,17 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
   const { id } = await params;
   const anime = await getAnime(id);
   const title = anime?.title || id.replace(/[-_]/g, " ");
-  const description = anime?.description || anime?.descriptions?.[0] || `Nonton ${title} subtitle Indonesia dengan daftar episode dan informasi anime terbaru.`;
+  const description = anime?.description || anime?.descriptions?.[0] || `Nonton anime ${title} subtitle Indonesia dengan episode terbaru, sinopsis, jadwal, dan pilihan server streaming.`;
   const canonical = `${SITE_URL}/anime/${encodeURIComponent(id)}`;
   return {
-    title: `Nonton ${title} Sub Indo`,
+    title: `Nonton Anime ${title} Sub Indo | Episode Terbaru`,
     description: description.slice(0, 160),
+    keywords: [
+      `nonton anime ${title}`,
+      `nonton ${title} sub indo`,
+      `${title} episode terbaru`,
+      `${title} subtitle Indonesia`,
+    ],
     alternates: { canonical },
     openGraph: { title: `Nonton ${title} Sub Indo`, description: description.slice(0, 160), url: canonical, type: "video.tv_show", images: anime?.img || anime?.poster ? [{ url: anime.img || anime.poster || "" }] : undefined },
   };
