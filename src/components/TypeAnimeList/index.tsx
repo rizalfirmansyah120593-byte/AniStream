@@ -1,7 +1,7 @@
-/* eslint-disable @next/next/no-img-element */
 "use client";
 import React, { useState, useEffect, useCallback } from "react";
 import axios from "axios";
+import Image from "next/image";
 import { Star, Play, Plus, ChevronRight, Tv, Film, Clapperboard, Sparkles, Popcorn, Check } from "lucide-react";
 import Link from "next/link";
 import { Swiper, SwiperSlide } from "swiper/react";
@@ -136,6 +136,10 @@ const TypeAnimeList = (props: TypeAnimeListProps) => {
     });
   }, []);
 
+  const animeItems = data.isLoading
+    ? Array.from({ length: 8 })
+    : (data.data?.data || []).slice(0, 8);
+
   return (
     <div className={`w-full py-3 bg-gradient-to-r ${config.bgGradient}`}>
       <div className="px-4 md:px-8 lg:px-12">
@@ -165,10 +169,7 @@ const TypeAnimeList = (props: TypeAnimeListProps) => {
           }}
           className="anime-swiper"
         >
-          {(data.isLoading
-            ? Array.from({ length: 10 })
-            : data.data?.data || []
-          ).map((anime: Anime | undefined, index: number) => (
+          {animeItems.map((anime: Anime | undefined, index: number) => (
             <SwiperSlide key={index}>
               {data.isLoading || !anime ? (
                 // Skeleton Loading
@@ -187,12 +188,14 @@ const TypeAnimeList = (props: TypeAnimeListProps) => {
                   <div className="anime-card group relative">
                     {/* Image Container */}
                     <div className="aspect-[2/3] rounded-md overflow-hidden relative bg-gray-900 border-2 border-transparent group-hover:border-white/30 transition-all duration-300">
-                      <img
+                      <Image
                         src={anime.img || '/not_found.png'}
                         alt={anime.alt || anime.title}
                         onError={(event) => { event.currentTarget.src = '/not_found.png'; }}
-                        className="object-cover w-full h-full transform group-hover:scale-105 transition-transform duration-500"
-                        loading="lazy"
+                        fill
+                        quality={65}
+                        sizes="(max-width: 480px) 44vw, (max-width: 768px) 30vw, (max-width: 1280px) 19vw, 15vw"
+                        className="object-cover transform group-hover:scale-105 transition-transform duration-500"
                       />
                       
                       {/* Gradient Overlay */}

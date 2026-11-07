@@ -8,38 +8,16 @@ import { useQuery } from "@tanstack/react-query";
 import { Swiper, SwiperSlide } from "swiper/react";
 import type { Swiper as SwiperType } from "swiper";
 import { Navigation, Pagination, Autoplay, EffectFade } from "swiper/modules";
-import 'swiper/css/effect-fade';
 import Link from "next/link";
 import Loading from "@/components/Loading";
 import ListItemHorizontal from "@/components/ListItemHorizontal";
 import TypeAnimeList from "@/components/TypeAnimeList";
 import Footer from "@/components/Footer";
-import { X, Play, Info, Plus, Check, Star, Calendar, Film, Clock, Volume2, VolumeX, Sparkles } from "lucide-react";
+import { X, Play, Info, Plus, Check, Star, Calendar, Film, Clock, Volume2, VolumeX } from "lucide-react";
 import { getTrailerBySlug, getYouTubeEmbedUrl } from "@/utils/animeTrailers";
 import { isInMyList, toggleMyList, getMyList } from "@/utils/myList";
 import { API_URL } from '@/utils/config';
 import { AdsterraNative, AdsterraBanner } from '@/components/Ads/AdsterraAd';
-
-// Check if banner should be shown (once per day)
-const BANNER_STORAGE_KEY = 'AniStream_banner_last_shown';
-
-function shouldShowBanner(): boolean {
-  if (typeof window === 'undefined') return false;
-  
-  const lastShown = localStorage.getItem(BANNER_STORAGE_KEY);
-  if (!lastShown) return true;
-  
-  const lastShownDate = new Date(lastShown);
-  const now = new Date();
-  const hoursSinceLastShown = (now.getTime() - lastShownDate.getTime()) / (1000 * 60 * 60);
-  
-  return hoursSinceLastShown >= 24;
-}
-
-function markBannerAsShown(): void {
-  if (typeof window === 'undefined') return;
-  localStorage.setItem(BANNER_STORAGE_KEY, new Date().toISOString());
-}
 
 // create types for anime data
 interface Anime {
@@ -55,11 +33,6 @@ interface Anime {
   score: number;
 }
 
-interface Genres {
-  title: string;
-  id: string;
-}
-
 async function fetchNewAnime() {
   const { data } = await axios.get(
     `${API_URL}/new-anime`, { timeout: 10000 }
@@ -68,58 +41,67 @@ async function fetchNewAnime() {
 }
 
 // /genres
-async function fetchGenres() {
-  const { data } = await axios.get(
-    `${API_URL}/genres`, { timeout: 10000 }
-  );
-  return data;
-}
-
 // Helper to extract slug from anime object
 // Priority: slug field > extract from detail_url > extract from link
 function getAnimeSlug(anime: Anime): string {
-  // If slug field exists, use it directly
-  if (anime.slug) {
-    return anime.slug;
-  }
-  
-  // Try to extract from detail_url or link
+  if (anime.slug) return anime.slug;
   const url = anime.detail_url || anime.link || '';
-  
-  // Remove query params and hash
   const cleanUrl = url.split('?')[0].split('#')[0];
-  
-  // Get the last non-empty segment
-  const parts = cleanUrl.split('/').filter(Boolean);
-  const slug = parts[parts.length - 1] || '';
-  
-  return slug;
+  return cleanUrl.split('/').filter(Boolean).pop() || '';
+}
+
+const FEATURED_GENRES = [
+  { title: "Action", id: "action" },
+  { title: "Adventure", id: "adventure" },
+  { title: "Comedy", id: "comedy" },
+  { title: "Drama", id: "drama" },
+  { title: "Fantasy", id: "fantasy" },
+  { title: "Romance", id: "romance" },
+];
+
+const FEATURED_TYPES = [
+  { title: "TV Series", typeValue: "tv" as const, queryKey: "type-tv" },
+  { title: "Movie", typeValue: "movie" as const, queryKey: "type-movie" },
+  { title: "OVA", typeValue: "ova" as const, queryKey: "type-ova" },
+];
+
+function DeferredSection({ title, children }: { title: string; children: React.ReactNode }) {
+  const sectionRef = React.useRef<HTMLDivElement>(null);
+  const [isNearViewport, setIsNearViewport] = useState(false);
+
+  useEffect(() => {
+    const element = sectionRef.current;
+    if (!element || isNearViewport) return;
+    const observer = new IntersectionObserver(([entry]) => {
+      if (entry.isIntersecting) {
+        setIsNearViewport(true);
+        observer.disconnect();
+      }
+    }, { rootMargin: "700px 0px" });
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, [isNearViewport]);
+
+  return (
+    <div ref={sectionRef} className="min-h-[390px] [content-visibility:auto] [contain-intrinsic-size:390px]">
+      {isNearViewport ? children : (
+        <section className="min-h-[390px] px-4 py-3 md:px-8 lg:px-12" aria-label={title}>
+          <h2 className="mb-4 text-xl font-semibold text-white md:text-2xl">{title}</h2>
+          <div className="h-[320px]" aria-hidden="true" />
+        </section>
+      )}
+    </div>
+  );
 }
 
 type HomeClientProps = { initialNewAnime: unknown };
 
 export default function Home({ initialNewAnime }: HomeClientProps) {
-  const [popup, setPopup] = useState(false);
-  const [showPopupContent, setShowPopupContent] = useState(false);
   const [selectedAnime, setSelectedAnime] = useState<Anime | null>(null);
   const [isMuted, setIsMuted] = useState(true);
+  const [isTrailerPlaying, setIsTrailerPlaying] = useState(false);
   const [activeSlideIndex, setActiveSlideIndex] = useState(0);
   const [myListLinks, setMyListLinks] = useState<string[]>([]);
-  
-  // Jangan tampilkan popup otomatis pada load awal: popup menjadi kandidat
-  // LCP dan menambah pekerjaan main-thread pada perangkat mobile.
-  useEffect(() => {
-    return undefined;
-  }, []);
-
-  // Handle closing the banner popup
-  const closeBannerPopup = useCallback(() => {
-    setShowPopupContent(false);
-    setTimeout(() => {
-      setPopup(false);
-      markBannerAsShown();
-    }, 300);
-  }, []);
   
   // Load My List from localStorage on mount
   useEffect(() => {
@@ -159,16 +141,10 @@ export default function Home({ initialNewAnime }: HomeClientProps) {
     retryDelay: 1000,
   });
 
-  const genres = useQuery({
-    queryKey: ["genres"],
-    queryFn: fetchGenres,
-    retry: 1,
-    retryDelay: 1000,
-  });
-
   // Handle slide change to track active slide
   const handleSlideChange = useCallback((swiper: SwiperType) => {
     setActiveSlideIndex(swiper.realIndex);
+    setIsTrailerPlaying(false);
   }, []);
 
   if (newAnime.isLoading)
@@ -230,7 +206,7 @@ export default function Home({ initialNewAnime }: HomeClientProps) {
             const slug = getAnimeSlug(anime);
             const trailer = getTrailerBySlug(slug);
             const isActiveSlide = activeSlideIndex === index;
-            const trailerUrl = trailer && isActiveSlide ? getYouTubeEmbedUrl(slug, { muted: isMuted }) : null;
+            const trailerUrl = trailer && isActiveSlide && isTrailerPlaying ? getYouTubeEmbedUrl(slug, { muted: isMuted }) : null;
 
             return (
               <SwiperSlide key={index}>
@@ -255,6 +231,7 @@ export default function Home({ initialNewAnime }: HomeClientProps) {
                         className="object-cover w-full h-full transform scale-105"
                         fill
                         priority={index === 0}
+                        quality={68}
                         fetchPriority={index === 0 ? "high" : "auto"}
                         sizes="(max-width: 640px) 100vw, (max-width: 1024px) 90vw, 1280px"
                       />}
@@ -345,7 +322,16 @@ export default function Home({ initialNewAnime }: HomeClientProps) {
                   </div>
 
                   {/* Mute/Unmute Button for Video */}
-                  {trailer && isActiveSlide && (
+                  {trailer && isActiveSlide && !isTrailerPlaying && (
+                    <button
+                      onClick={() => setIsTrailerPlaying(true)}
+                      aria-label="Putar trailer"
+                      className="absolute bottom-20 sm:bottom-24 right-4 sm:right-8 md:right-16 z-30 rounded-full bg-black/70 px-4 py-2 text-sm text-white hover:bg-black"
+                    >
+                      Putar trailer
+                    </button>
+                  )}
+                  {trailer && isActiveSlide && isTrailerPlaying && (
                     <button
                       onClick={() => setIsMuted(!isMuted)}
                       className="absolute bottom-20 sm:bottom-24 right-4 sm:right-8 md:right-16 z-30 w-9 h-9 sm:w-10 sm:h-10 md:w-12 md:h-12 rounded-full border border-gray-500 sm:border-2 sm:border-gray-400 hover:border-white bg-black/60 flex items-center justify-center transition-all"
@@ -395,163 +381,31 @@ export default function Home({ initialNewAnime }: HomeClientProps) {
       
       {/* Mixed Genre & Type Anime Sections */}
       <div className="flex flex-col gap-4 my-4">
-        {!genres.isLoading && (() => {
-          const genreList = genres.data?.data || [];
-          const typeAnimeConfigs = [
-            { title: "TV Series", typeValue: "tv" as const, queryKey: "type-tv" },
-            { title: "OVA", typeValue: "ova" as const, queryKey: "type-ova" },
-            { title: "ONA", typeValue: "ona" as const, queryKey: "type-ona" },
-            { title: "Special", typeValue: "special" as const, queryKey: "type-special" },
-            { title: "Movie", typeValue: "movie" as const, queryKey: "type-movie" },
-          ];
-          
-          // Calculate interval to distribute type sections evenly among genres
-          const totalGenres = genreList.length;
-          const interval = Math.floor(totalGenres / (typeAnimeConfigs.length + 1));
-          
-          // Track which type section to insert next
-          let typeIndex = 0;
-          const elements: React.ReactNode[] = [];
-          
-          genreList.forEach((genre: Genres, index: number) => {
-            // Add genre section
-            elements.push(
-              <ListItemHorizontal
-                key={`genre-${index}`}
-                title={genre.title}
-                apifetch={`${API_URL}/genre-anime/${genre.id}`}
-                queryKey={`genre-${genre.id}`}
-                seeAllHref={`/genres/${genre.id}`}
-              />
-            );
-            
-            // Check if we should insert a type section after this genre
-            if (typeIndex < typeAnimeConfigs.length && (index + 1) % interval === 0 && index !== totalGenres - 1) {
-              const typeConfig = typeAnimeConfigs[typeIndex];
-              elements.push(
-                <TypeAnimeList
-                  key={`type-${typeConfig.typeValue}`}
-                  title={typeConfig.title}
-                  typeValue={typeConfig.typeValue}
-                  apifetch={`${API_URL}/type-anime/${typeConfig.typeValue}`}
-                  queryKey={typeConfig.queryKey}
-                  seeAllHref={`/type/${typeConfig.typeValue}`}
-                />
-              );
-              typeIndex++;
-            }
-          });
-          
-          // Add remaining type sections at the end if any
-          while (typeIndex < typeAnimeConfigs.length) {
-            const typeConfig = typeAnimeConfigs[typeIndex];
-            elements.push(
-              <TypeAnimeList
-                key={`type-${typeConfig.typeValue}`}
-                title={typeConfig.title}
-                typeValue={typeConfig.typeValue}
-                apifetch={`${API_URL}/type-anime/${typeConfig.typeValue}`}
-                queryKey={typeConfig.queryKey}
-                seeAllHref={`/type/${typeConfig.typeValue}`}
-              />
-            );
-            typeIndex++;
-          }
-          
-          return elements;
-        })()}
+        {FEATURED_GENRES.map((genre) => (
+          <DeferredSection key={`genre-${genre.id}`} title={genre.title}>
+            <ListItemHorizontal
+              title={genre.title}
+              apifetch={`${API_URL}/genre-anime/${genre.id}`}
+              queryKey={`genre-${genre.id}`}
+              seeAllHref={`/genres/${genre.id}`}
+            />
+          </DeferredSection>
+        ))}
+        {FEATURED_TYPES.map((type) => (
+          <DeferredSection key={`type-${type.typeValue}`} title={type.title}>
+            <TypeAnimeList
+              title={type.title}
+              typeValue={type.typeValue}
+              apifetch={`${API_URL}/type-anime/${type.typeValue}`}
+              queryKey={type.queryKey}
+              seeAllHref={`/type/${type.typeValue}`}
+            />
+          </DeferredSection>
+        ))}
       </div>
 
       {/* Footer */}
       <Footer />
-
-      {/* Banner Popup - Shows once per day */}
-      {popup && (
-        <div 
-          className={`fixed inset-0 flex items-center justify-center z-[9999] p-4 transition-all duration-300 ${
-            showPopupContent ? 'bg-black/90 backdrop-blur-md' : 'bg-transparent'
-          }`}
-          onClick={closeBannerPopup}
-        >
-          <div 
-            className={`relative max-w-lg w-full transition-all duration-300 ${
-              showPopupContent 
-                ? 'opacity-100 scale-100 translate-y-0' 
-                : 'opacity-0 scale-90 translate-y-8'
-            }`}
-            onClick={(e) => e.stopPropagation()}
-          >
-            {/* Glow Effect */}
-            <div className="absolute -inset-1 bg-gradient-to-r from-red-600 via-purple-600 to-red-600 rounded-2xl blur-lg opacity-50 animate-pulse" />
-            
-            {/* Main Card */}
-            <div className="relative bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 rounded-2xl overflow-hidden shadow-2xl border border-gray-700/50">
-              {/* Header Badge */}
-              <div className="absolute top-4 left-4 z-20 flex items-center gap-2">
-                <div className="flex items-center gap-1.5 bg-red-600 text-white text-xs font-bold px-3 py-1.5 rounded-full shadow-lg">
-                  <Sparkles className="w-3.5 h-3.5" />
-                  <span>PENGUMUMAN</span>
-                </div>
-              </div>
-              
-              {/* Close Button */}
-              <button 
-                onClick={closeBannerPopup}
-                aria-label="Tutup pengumuman"
-                className="absolute top-4 right-4 z-20 w-8 h-8 rounded-full bg-black/50 hover:bg-black/80 backdrop-blur-sm flex items-center justify-center transition-all hover:rotate-90 duration-200 border border-white/20"
-              >
-                <X className="w-4 h-4 text-white" />
-              </button>
-              
-              {/* Banner Image */}
-              <div className="relative aspect-[16/10] sm:aspect-[16/9] overflow-hidden">
-                <img
-                  src="/banner.png"
-                  alt="AniStream Banner"
-                  className="w-full h-full object-cover"
-                  width={800}
-                  height={499}
-                  loading="lazy"
-                  decoding="async"
-                />
-                {/* Gradient Overlay */}
-                <div className="absolute inset-0 bg-gradient-to-t from-gray-900 via-transparent to-transparent" />
-              </div>
-              
-              {/* Content */}
-              <div className="p-5 sm:p-6">
-                <h3 className="text-lg sm:text-xl font-bold text-white mb-2">
-                  Selamat Datang di AniStream! 🎉
-                </h3>
-                <p className="text-gray-400 text-sm leading-relaxed mb-4">
-                  Nikmati streaming anime favorit kamu dengan kualitas terbaik. 
-                  Update episode terbaru setiap hari!
-                </p>
-                
-                {/* Action Buttons */}
-                <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
-                  <button 
-                    onClick={closeBannerPopup}
-                    className="flex-1 bg-gradient-to-r from-red-600 to-red-500 hover:from-red-500 hover:to-red-400 text-white font-semibold py-2.5 px-4 rounded-lg flex items-center justify-center gap-2 transition-all shadow-lg shadow-red-600/30"
-                  >
-                    <Play className="w-4 h-4 fill-white" />
-                    <span>Mulai Nonton</span>
-                  </button>
-                  <button 
-                    onClick={closeBannerPopup}
-                    className="flex-1 bg-gray-700/50 hover:bg-gray-600/50 text-gray-300 hover:text-white font-medium py-2.5 px-4 rounded-lg transition-all border border-gray-600/50"
-                  >
-                    Nanti Saja
-                  </button>
-                </div>
-              </div>
-              
-              {/* Bottom Decoration */}
-              <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-red-600 via-purple-600 to-red-600" />
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Anime Info Modal */}
       {selectedAnime && (

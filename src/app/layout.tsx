@@ -1,10 +1,11 @@
 import type { Metadata } from "next";
 import Script from "next/script";
 import "./globals.css";
-// @ts-ignore
-import "swiper/css/bundle";
+import "swiper/css";
+import "swiper/css/navigation";
+import "swiper/css/pagination";
+import "swiper/css/effect-fade";
 import { Providers } from "@/components/Providers";
-import { AdsterraSiteScripts } from "@/components/Ads/AdsterraAd";
 import { SITE_URL } from "@/utils/config";
 import { JsonLd } from "@/components/Seo/JsonLd";
 import { WebMcpTools } from "@/components/WebMcpTools";
@@ -42,9 +43,9 @@ export default function RootLayout({
           <Script
             async
             src="https://www.googletagmanager.com/gtag/js?id=G-C4EQ753MZB"
-            strategy="afterInteractive"
+            strategy="lazyOnload"
           />
-          <Script id="google-analytics" strategy="afterInteractive">
+          <Script id="google-analytics" strategy="lazyOnload">
             {`
               window.dataLayer = window.dataLayer || [];
               function gtag(){dataLayer.push(arguments);}
@@ -52,14 +53,12 @@ export default function RootLayout({
               gtag('config', 'G-C4EQ753MZB');
             `}
           </Script>
-          <Script src="/Script.js" strategy="afterInteractive" />
           <JsonLd data={{ "@context": "https://schema.org", "@type": "WebSite", "@id": `${SITE_URL}/#website`, name: "AniStream", url: SITE_URL, inLanguage: ["id-ID", "en-US"], potentialAction: { "@type": "SearchAction", target: `${SITE_URL}/search?q={search_term_string}`, "query-input": "required name=search_term_string" } }} />
           <JsonLd data={{ "@context": "https://schema.org", "@type": "Organization", "@id": `${SITE_URL}/#organization`, name: "AniStream", url: SITE_URL, logo: { "@type": "ImageObject", url: `${SITE_URL}/banner.png` }, contactPoint: { "@type": "ContactPoint", contactType: "customer support", email: "contact@anistreaming.com", availableLanguage: ["Indonesian", "English"] } }} />
           <WebMcpTools />
           <Providers>
             {children}
           </Providers>
-          <AdsterraSiteScripts />
         </body>
       </html>
   );

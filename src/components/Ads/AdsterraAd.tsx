@@ -1,6 +1,6 @@
 'use client';
 
-import Script from 'next/script';
+import { useEffect, useRef } from 'react';
 
 const HOST = 'https://alwaysmulticulturallanding.com';
 
@@ -21,34 +21,72 @@ const dimensions: Record<AdSize, { width: number; height: number }> = {
   '160x600': { width: 160, height: 600 }, '300x250': { width: 300, height: 250 },
 };
 
+function loadWhenNearViewport(element: HTMLElement, load: () => void) {
+  if (!("IntersectionObserver" in window)) {
+    load();
+    return () => undefined;
+  }
+  const observer = new IntersectionObserver(([entry]) => {
+    if (entry.isIntersecting) {
+      observer.disconnect();
+      load();
+    }
+  }, { rootMargin: "300px" });
+  observer.observe(element);
+  return () => observer.disconnect();
+}
+
 export function AdsterraBanner({ size }: { size: AdSize }) {
+  const slotRef = useRef<HTMLElement>(null);
+  const loadedRef = useRef(false);
   const key = bannerKeys[size];
   const { width, height } = dimensions[size];
-  return (
-    <aside className="ad-slot flex justify-center overflow-hidden" style={{ minHeight: height }} aria-label="Iklan">
-      <Script id={`adsterra-${key}`} strategy="afterInteractive">
-        {`window.atOptions = {key: '${key}', format: 'iframe', height: ${height}, width: ${width}, params: {}};`}
-      </Script>
-      <Script src={`${HOST}/${key}/invoke.js`} strategy="lazyOnload" />
-    </aside>
-  );
+
+  useEffect(() => {
+    const slot = slotRef.current;
+    if (!slot) return;
+    return loadWhenNearViewport(slot, () => {
+      if (loadedRef.current) return;
+      loadedRef.current = true;
+      (window as Window & { atOptions?: Record<string, unknown> }).atOptions = {
+        key,
+        format: "iframe",
+        height,
+        width,
+        params: {},
+      };
+      const script = document.createElement("script");
+      script.async = true;
+      script.src = `${HOST}/${key}/invoke.js`;
+      slot.appendChild(script);
+    });
+  }, [height, key, width]);
+
+  return <aside ref={slotRef} className="ad-slot flex justify-center overflow-hidden" style={{ minHeight: height }} aria-label="Iklan" />;
 }
 
 export function AdsterraNative() {
-  const id = 'bcf5164b464a8e3c0b486cd50f77b999';
+  const id = "bcf5164b464a8e3c0b486cd50f77b999";
+  const slotRef = useRef<HTMLElement>(null);
+  const loadedRef = useRef(false);
+
+  useEffect(() => {
+    const slot = slotRef.current;
+    if (!slot) return;
+    return loadWhenNearViewport(slot, () => {
+      if (loadedRef.current) return;
+      loadedRef.current = true;
+      const script = document.createElement("script");
+      script.async = true;
+      script.setAttribute("data-cfasync", "false");
+      script.src = `${HOST}/${id}/invoke.js`;
+      slot.appendChild(script);
+    });
+  }, [id]);
+
   return (
-    <aside className="ad-slot min-h-[100px]" aria-label="Iklan rekomendasi">
-      <Script async data-cfasync="false" src={`${HOST}/${id}/invoke.js`} strategy="lazyOnload" />
+    <aside ref={slotRef} className="ad-slot min-h-[250px]" aria-label="Iklan rekomendasi">
       <div id={`container-${id}`} />
     </aside>
-  );
-}
-
-export function AdsterraSiteScripts() {
-  return (
-    <>
-      <Script src={`${HOST}/fe/8f/81/fe8f815f75fcefd6fa17243386912ae0.js`} strategy="lazyOnload" />
-      <Script src={`${HOST}/a2/e0/3c/a2e03cf1bed0e9d731c3812e05e4517c.js`} strategy="lazyOnload" />
-    </>
   );
 }

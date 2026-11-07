@@ -28,7 +28,6 @@ interface NotificationResponse {
 }
 
 const Navbar = () => {
-  const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
   const [notifications, setNotifications] = useState<NotificationAnime[]>([]);
@@ -37,14 +36,6 @@ const Navbar = () => {
   const notificationRef = useRef<HTMLDivElement>(null);
   const pathname = usePathname();
   const { language, setLanguage, t } = useLanguage();
-
-  useEffect(() => {
-    const handleScroll = () => {
-      setIsScrolled(window.scrollY > 50);
-    };
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
 
   // Close mobile menu when route changes
   useEffect(() => {

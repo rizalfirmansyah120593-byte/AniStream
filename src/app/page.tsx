@@ -21,7 +21,10 @@ export const metadata: Metadata = {
 
 async function getInitialNewAnime() {
   try {
-    const response = await fetch(`${API_URL}/new-anime`, { next: { revalidate: 60 } });
+    const response = await fetch(`${API_URL}/new-anime`, {
+      signal: AbortSignal.timeout(5000),
+      next: { revalidate: 60 },
+    });
     if (!response.ok) return { data: [] };
     return await response.json();
   } catch {
