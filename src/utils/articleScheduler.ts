@@ -5,13 +5,14 @@ const TICK_MS = 60_000;
 const STARTUP_GRACE_MS = 10_000;
 const MAX_SLOT_DELAY_MINUTES = 12;
 
-async function runDueSlot() {
+async function runDueSlot(force = false) {
   if (process.env.ARTICLE_AUTOPUBLISH_ENABLED !== "true" || !process.env.OPENAI_API_KEY) return;
 
   const now = new Date();
-  if (now.getUTCMinutes() > MAX_SLOT_DELAY_MINUTES) return;
+  if (!force && now.getUTCMinutes() > MAX_SLOT_DELAY_MINUTES) return;
 
   try {
+    console.info(`[article-scheduler] Starting ${force ? "startup recovery" : "scheduled slot"} at ${now.toISOString()}`);
     await ensureArticleSchema();
     await runArticleGeneration();
   } catch (error) {
@@ -35,7 +36,7 @@ export function startArticleScheduler() {
   globalState.__anistreamArticleScheduler = true;
 
   setTimeout(() => {
-    void runDueSlot();
+    void runDueSlot(true);
     setInterval(() => void runDueSlot(), TICK_MS);
   }, STARTUP_GRACE_MS);
   console.info("[article-scheduler] Enabled; running once after startup and checking every two-hour UTC slot");

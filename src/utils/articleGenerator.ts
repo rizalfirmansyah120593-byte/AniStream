@@ -99,6 +99,7 @@ async function getArticleCandidates(): Promise<ArticleCandidate[]> {
   const popularEntries = (popularResult.status === "fulfilled" ? popularResult.value?.data || [] : []) as CatalogEntry[];
   const catalogEntries = [...newEntries, ...popularEntries];
   if (!catalogEntries.length) throw new Error("Anime catalog is unavailable");
+  console.info(`[article-scheduler] Catalog candidates loaded: new=${newEntries.length}, popular=${popularEntries.length}`);
 
   if (feedResult.status === "fulfilled" && feedResult.value.ok) {
     const trendItems = parseTrendFeed(await feedResult.value.text());
@@ -118,6 +119,7 @@ async function getArticleCandidates(): Promise<ArticleCandidate[]> {
     });
 
     if (trendCandidates.length) {
+      console.info(`[article-scheduler] Matched ${trendCandidates.length} current Google Trends queries to anime`);
       return trendCandidates.sort((a, b) => Number(b.traffic.replace(/[^\d]/g, "")) - Number(a.traffic.replace(/[^\d]/g, "")));
     }
     console.info("[article-scheduler] No current Google Trends query matched anime in the catalog; using ranked anime fallback");
@@ -126,7 +128,7 @@ async function getArticleCandidates(): Promise<ArticleCandidate[]> {
   }
 
   const seen = new Set<string>();
-  return popularEntries.flatMap(entry => {
+  const fallbackCandidates = popularEntries.flatMap(entry => {
     const animeSlug = slugFromEntry(entry);
     const query = String(entry.title || "").trim();
     const key = animeSlug.toLowerCase();
@@ -134,6 +136,8 @@ async function getArticleCandidates(): Promise<ArticleCandidate[]> {
     seen.add(key);
     return [{ query, traffic: "Pilihan katalog populer", animeSlug, source: "popular-catalog" as const }];
   });
+  console.info(`[article-scheduler] Ranked anime fallback candidates: ${fallbackCandidates.length}`);
+  return fallbackCandidates;
 }
 
 async function getAnimeFacts(slug: string): Promise<AnimeFacts> {
@@ -223,6 +227,7 @@ async function generateDraft(query: string, traffic: string, facts: AnimeFacts, 
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) throw new Error("OPENAI_API_KEY is not configured");
 
+  console.info(`[article-scheduler] Requesting sourced article for ${source}: ${query}`);
   const response = await fetch("https://api.openai.com/v1/responses", {
     method: "POST",
     headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
@@ -289,7 +294,11 @@ function makeSlotKey(date = new Date()) {
 
 export async function runArticleGeneration() {
   const slotKey = makeSlotKey();
-  if (!(await beginArticleRun(slotKey))) return;
+  if (!(await beginArticleRun(slotKey))) {
+    console.info(`[article-scheduler] Slot ${slotKey} was already processed`);
+    return;
+  }
+  console.info(`[article-scheduler] Processing article slot ${slotKey}`);
 
   try {
     const candidates = await getArticleCandidates();
