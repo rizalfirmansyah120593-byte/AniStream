@@ -16,16 +16,13 @@ type PaginatedResponse = {
   total_page?: number;
 };
 
-// Keep sitemap generation bounded. A sitemap should never make a deployment
-// depend on an external API responding indefinitely.
-export const revalidate = 3600;
+// Sitemap data is resolved on request so external API latency cannot fail a build.
+export const dynamic = "force-dynamic";
 
-const API_REQUEST_TIMEOUT_MS = 5000;
-// The catalog can contain tens of thousands of anime. The API's total_page
-// value determines the actual size; these are only safety limits.
-const GENERATION_TIMEOUT_MS = 60000;
-const MAX_PAGES_PER_ENDPOINT = 1000;
-const PAGE_CONCURRENCY = 12;
+const API_CACHE_SECONDS = 3600;
+const API_REQUEST_TIMEOUT_MS = 3000;
+const GENERATION_TIMEOUT_MS = 4000;
+const MAX_SITEMAP_URLS = 50000;
 const CATALOG_ENDPOINTS = ["/new-anime", "/order-anime/latest-added"];
 const STATIC_ROUTES = [
   { path: "", priority: 1, changeFrequency: "daily" as const },
@@ -42,6 +39,7 @@ const STATIC_ROUTES = [
   { path: "/category/ongoing", priority: 0.7, changeFrequency: "daily" as const },
   { path: "/category/completed", priority: 0.6, changeFrequency: "weekly" as const },
   { path: "/faq", priority: 0.3, changeFrequency: "monthly" as const },
+  { path: "/about", priority: 0.2, changeFrequency: "yearly" as const },
   { path: "/contact", priority: 0.2, changeFrequency: "yearly" as const },
   { path: "/terms", priority: 0.1, changeFrequency: "yearly" as const },
   { path: "/privacy", priority: 0.1, changeFrequency: "yearly" as const },
@@ -84,7 +82,7 @@ async function fetchPage(endpoint: string, page: number, deadline: number) {
       signal: controller.signal,
       // Next caches successful API responses, so ISR does not hit the API on
       // every request after the sitemap has been generated.
-      next: { revalidate },
+      next: { revalidate: API_CACHE_SECONDS },
     });
 
     if (!response.ok) return null;
@@ -96,105 +94,64 @@ async function fetchPage(endpoint: string, page: number, deadline: number) {
   }
 }
 
-async function fetchRemainingPages(
-  endpoint: string,
-  totalPages: number,
-  deadline: number,
-  slugs: Set<string>,
-  modified: Map<string, Date>,
-) {
-  let nextPage = 2;
-
-  async function worker() {
-    while (nextPage <= totalPages && Date.now() < deadline) {
-      const page = nextPage++;
-      addSlugs(await fetchPage(endpoint, page, deadline), slugs, modified);
-    }
-  }
-
-  const workerCount = Math.min(PAGE_CONCURRENCY, Math.max(totalPages - 1, 0));
-  await Promise.all(Array.from({ length: workerCount }, worker));
-}
-
-async function getAnimeUrls() {
-  const deadline = Date.now() + GENERATION_TIMEOUT_MS;
+async function getAnimeUrls(deadline: number) {
   const slugs = new Set<string>();
   const modified = new Map<string, Date>();
 
-  // Fetch both catalog heads at once. If either endpoint is unavailable, the
-  // other one can still contribute URLs to the sitemap.
+  // Include the first page from each feed; pagination and episode expansion
+  // would make each sitemap request unbounded on a large catalog.
   const firstPages = await Promise.all(
     CATALOG_ENDPOINTS.map(endpoint => fetchPage(endpoint, 1, deadline)),
   );
-
-  await Promise.all(
-    CATALOG_ENDPOINTS.map(async (endpoint, index) => {
-      const first = firstPages[index];
-      addSlugs(first, slugs, modified);
-      if (!first) return;
-
-      // Bound malformed/very large API responses. The time budget remains the
-      // final guard against a slow API or an unexpectedly large catalogue.
-      const totalPages = Math.min(
-        Math.max(Number(first.total_page) || 1, 1),
-        MAX_PAGES_PER_ENDPOINT,
-      );
-      await fetchRemainingPages(endpoint, totalPages, deadline, slugs, modified);
-    }),
-  );
+  firstPages.forEach(page => addSlugs(page, slugs, modified));
 
   return { slugs: [...slugs], modified };
 }
 
-async function getCollectionUrls() {
+async function getCollectionUrls(deadline: number) {
   const urls: Array<{ url: string; lastModified: Date; priority: number; changeFrequency: "daily" | "weekly" }> = [];
-  try {
-    const response = await fetch(`${API_URL}/genres`, { next: { revalidate } });
-    const json = await response.json();
-    for (const genre of json?.data || []) {
-      const slug = normalizeSlug(String(genre.id || genre.slug || ""));
-      if (!slug) continue;
-      urls.push({ url: `${SITE_URL}/genres/${encodeURIComponent(slug)}`, lastModified: new Date(), priority: 0.6, changeFrequency: "daily" });
-      const first = await fetchPage(`/genre-anime/${encodeURIComponent(slug)}`, 1, Date.now() + 5000);
-      const total = Math.min(Math.max(Number(first?.total_page) || 1, 1), MAX_PAGES_PER_ENDPOINT);
-      for (let page = 2; page <= total; page++) urls.push({ url: `${SITE_URL}/genres/${encodeURIComponent(slug)}?page=${page}`, lastModified: new Date(), priority: 0.4, changeFrequency: "weekly" });
+  const remaining = deadline - Date.now();
+
+  if (remaining > 0) {
+    const controller = new AbortController();
+    const timeout = setTimeout(
+      () => controller.abort(),
+      Math.min(API_REQUEST_TIMEOUT_MS, remaining),
+    );
+
+    try {
+      const response = await fetch(`${API_URL}/genres`, {
+        signal: controller.signal,
+        next: { revalidate: API_CACHE_SECONDS },
+      });
+      if (response.ok) {
+        const json = await response.json();
+        for (const genre of json?.data || []) {
+          const slug = normalizeSlug(String(genre.id || genre.slug || ""));
+          if (!slug) continue;
+          urls.push({ url: `${SITE_URL}/genres/${encodeURIComponent(slug)}`, lastModified: new Date(), priority: 0.6, changeFrequency: "daily" });
+        }
+      }
+    } catch {
+      // Static URLs remain available when the catalogue API cannot be reached.
+    } finally {
+      clearTimeout(timeout);
     }
-  } catch { /* sitemap remains valid when the catalogue API is unavailable */ }
+  }
+
   for (const type of ["tv", "ova", "ona", "special", "movie"]) {
     urls.push({ url: `${SITE_URL}/type/${type}`, lastModified: new Date(), priority: 0.5, changeFrequency: "weekly" });
   }
   return urls;
 }
 
-async function getEpisodeUrls(slugs: string[], modified: Map<string, Date>) {
-  const urls: Array<{ url: string; lastModified: Date; priority: number; changeFrequency: "daily" }> = [];
-  let cursor = 0;
-  async function worker() {
-    while (cursor < slugs.length) {
-      const slug = slugs[cursor++];
-      try {
-        const response = await fetch(`${API_URL}/detail-anime/${encodeURIComponent(slug)}`, { next: { revalidate } });
-        if (!response.ok) continue;
-        const payload = await response.json();
-        const anime = payload?.data || payload;
-        for (const episode of anime?.episodes || []) {
-          const description = String(episode.description || "").trim();
-          if (!description || episode.episode == null) continue;
-          const number = encodeURIComponent(String(episode.episode));
-          urls.push({ url: `${SITE_URL}/watch/${encodeURIComponent(slug)}/${number}`, lastModified: modified.get(slug) ?? new Date(), priority: 0.7, changeFrequency: "daily" });
-        }
-      } catch { /* omit episode when its factual metadata cannot be verified */ }
-    }
-  }
-  await Promise.all(Array.from({ length: Math.min(8, slugs.length) }, worker));
-  return urls;
-}
-
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const now = new Date();
-  const { slugs, modified } = await getAnimeUrls();
-  const collectionUrls = await getCollectionUrls();
-  const episodeUrls = await getEpisodeUrls(slugs, modified);
+  const deadline = Date.now() + GENERATION_TIMEOUT_MS;
+  const [{ slugs, modified }, collectionUrls] = await Promise.all([
+    getAnimeUrls(deadline),
+    getCollectionUrls(deadline),
+  ]);
   const entries = [
     ...STATIC_ROUTES.map(route => ({
       url: `${SITE_URL}${route.path}`,
@@ -209,10 +166,9 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       changeFrequency: "daily" as const,
     })),
     ...collectionUrls,
-    ...episodeUrls,
   ];
 
-  // Defensive deduplication keeps the sitemap valid when an anime appears in
-  // both catalog endpoints.
-  return [...new Map(entries.map(entry => [entry.url, entry])).values()];
+  // Deduplicate overlapping catalogs and stay within the sitemap protocol's
+  // 50,000-URL limit.
+  return [...new Map(entries.map(entry => [entry.url, entry])).values()].slice(0, MAX_SITEMAP_URLS);
 }

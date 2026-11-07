@@ -1,21 +1,7 @@
-# Dynamic sitemap
+# Sitemap
 
-`sitemap.php` menghasilkan XML Sitemap Protocol 0.9 dari tabel `genres`, `anime`, dan `episodes` melalui PDO. Pastikan kolom berikut tersedia: `slug`, `updated_at`; selain itu `genres.is_active`, `anime.id/status`, serta `episodes.anime_id/is_published/published_at`.
+Aplikasi Next.js menyajikan `https://anistreaming.com/sitemap.xml` melalui `src/app/sitemap.ts`. Rute ini dibuat dinamis agar API katalog tidak dipanggil saat build/deploy. Permintaan katalog memiliki timeout dan batas total waktu; jika API tidak tersedia, sitemap tetap memuat halaman statis.
 
-Set environment variable berikut pada server:
+`SITE_URL` dan `NEXT_PUBLIC_API_URL` dapat disetel pada environment aplikasi. Jangan menambahkan rewrite Apache/PHP untuk `/sitemap.xml`; URL tersebut sudah dimiliki oleh rute Next.js. Skrip PHP lama telah dihapus karena tidak digunakan oleh aplikasi Node.js.
 
-```text
-SITE_URL=https://anistreaming.com
-DB_DSN=mysql:host=127.0.0.1;dbname=anistream;charset=utf8mb4
-DB_USER=...
-DB_PASS=...
-```
-
-Arahkan `/sitemap.xml` ke skrip ini. Contoh Apache `.htaccess`:
-
-```apache
-RewriteEngine On
-RewriteRule ^sitemap\.xml$ /sitemap.php [L]
-```
-
-`robots.txt` sudah mengarahkan crawler ke `https://anistreaming.com/sitemap.xml`. Submit URL tersebut ke Google Search Console dan Bing Webmaster Tools. Sitemap sebaiknya tidak menampilkan URL yang memerlukan login, URL duplikat, atau URL yang diblokir robots/noindex.
+Submit URL sitemap ke Google Search Console dan Bing Webmaster Tools. Hindari memasukkan URL yang memerlukan login, duplikat, atau diblokir oleh robots/noindex.
