@@ -1,0 +1,39 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/v1/server-card.schema.json",
+  "name": "com.anistreaming/mcp",
+  "title": "AniStream",
+  "description": "Read-only site information and navigation tools for AniStream.",
+  "version": "1.0.0",
+  "url": "https://anistreaming.com/api/mcp",
+  "serverUrl": "https://anistreaming.com/api/mcp",
+  "serverInfo": {
+    "name": "AniStream",
+    "version": "1.0.0",
+    "homepage": "https://anistreaming.com"
+  },
+  "protocolVersion": "2025-11-25",
+  "transport": {
+    "type": "streamableHttp",
+    "endpoint": "https://anistreaming.com/api/mcp"
+  },
+  "remotes": [
+    {
+      "type": "streamable-http",
+      "url": "https://anistreaming.com/api/mcp"
+    }
+  ],
+  "capabilities": {
+    "tools": true
+  },
+  "tools": [
+    {
+      "name": "get_anistream_site_info",
+      "description": "Get a short description of AniStream and its main public pages.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      }
+    }
+  ]
+}

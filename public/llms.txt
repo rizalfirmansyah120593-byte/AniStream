@@ -1,0 +1,21 @@
+# AniStream
+
+> AniStream helps Indonesian anime fans discover anime series, films, genres, schedules, and episode listings. The site indexes third-party video links and does not host video files.
+
+## Main pages
+- [Home](https://anistreaming.com/): Browse recent anime and featured sections.
+- [Latest anime](https://anistreaming.com/latest)
+- [Popular anime](https://anistreaming.com/popular)
+- [Genres](https://anistreaming.com/genres)
+- [Schedule](https://anistreaming.com/schedule)
+- [FAQ](https://anistreaming.com/faq)
+- [About AniStream](https://anistreaming.com/about)
+- [Contact](https://anistreaming.com/contact): contact@anistreaming.com
+- [Terms of Service](https://anistreaming.com/terms)
+- [Privacy Policy](https://anistreaming.com/privacy)
+- [DMCA / Copyright](https://anistreaming.com/dmca)
+
+## Content notes
+- Anime details and episode links may be sourced from third parties.
+- AniStream does not host video files.
+- Contact: [contact@anistreaming.com](mailto:contact@anistreaming.com)

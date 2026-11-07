@@ -1,6 +1,27 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  async headers() {
+    return [
+      {
+        source: "/",
+        headers: [
+          {
+            key: "Link",
+            value: '<https://anistreaming.com/llms.txt>; rel="describedby"; type="text/plain", <https://anistreaming.com/markdown>; rel="alternate"; type="text/markdown"',
+          },
+          { key: "Vary", value: "Accept" },
+        ],
+      },
+      {
+        source: "/.well-known/mcp/server-card.json",
+        headers: [
+          { key: "Content-Type", value: "application/mcp-server-card+json" },
+          { key: "Cache-Control", value: "public, max-age=3600" },
+        ],
+      },
+    ];
+  },
   images: {
     remotePatterns: [
       { protocol: 'http', hostname: '**' },

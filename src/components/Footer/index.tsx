@@ -21,6 +21,7 @@ const Footer = () => {
       { label: "OVA", href: "/genres/ova" },
     ],
     help: [
+      { label: "About AniStream", href: "/about" },
       { label: "FAQ", href: "/faq" },
       { label: "Contact Us", href: "/contact" },
       { label: "Terms of Service", href: "/terms" },
