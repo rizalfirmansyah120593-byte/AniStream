@@ -24,7 +24,7 @@ export default async function ArticlesPage() {
       <div className="mx-auto max-w-5xl">
         <Link href="/" className="text-sm text-red-400 hover:text-red-300">← Kembali ke AniStream</Link>
         <h1 className="mt-6 text-4xl font-semibold">Artikel Anime dan Tren</h1>
-        <p className="mt-4 max-w-3xl leading-7 text-gray-300">Artikel dipilih berdasarkan sinyal pencarian yang tersedia dan disertai sumber untuk pemeriksaan lebih lanjut. Jadwal otomatis dapat melewatkan waktu terbit jika tidak ada topik yang cukup relevan dan terverifikasi.</p>
+        <p className="mt-4 max-w-3xl leading-7 text-gray-300">Artikel menggunakan tren pencarian jika tersedia dan cocok dengan katalog; jika tidak, sistem memilih anime dari peringkat katalog populer. Setiap artikel menyertakan sumber untuk pemeriksaan. Jadwal dapat dilewati jika sumber, fakta, atau kualitas artikel tidak memenuhi syarat.</p>
         {articles.length ? (
           <ul className="mt-10 grid gap-6 md:grid-cols-2">
             {articles.map(article => (

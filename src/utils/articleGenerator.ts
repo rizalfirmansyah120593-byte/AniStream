@@ -38,6 +38,13 @@ type ArticleDraft = {
   sections: ArticleSection[];
 };
 
+type ArticleCandidate = {
+  query: string;
+  traffic: string;
+  animeSlug: string;
+  source: "google-trends" | "popular-catalog";
+};
+
 const TRENDS_URL = "https://trends.google.com/trending/rss?geo=ID";
 const MAX_ARTICLE_CHARS = 8000;
 const MIN_ARTICLE_CHARS = 1600;
@@ -82,33 +89,51 @@ async function fetchJson(url: string, timeoutMs = 5000) {
   return response.json();
 }
 
-async function getTrendingAnime() {
+async function getArticleCandidates(): Promise<ArticleCandidate[]> {
   const [feedResult, newResult, popularResult] = await Promise.allSettled([
     fetch(TRENDS_URL, { signal: AbortSignal.timeout(6000), cache: "no-store" }),
     fetchJson(`${API_URL}/new-anime?page=1`),
     fetchJson(`${API_URL}/order-anime/popular?page=1`),
   ]);
-  if (feedResult.status !== "fulfilled" || !feedResult.value.ok) {
-    throw new Error(`Google Trends RSS is unavailable${feedResult.status === "fulfilled" ? ` (${feedResult.value.status})` : ""}`);
-  }
-  const xml = await feedResult.value.text();
-  const trendItems = parseTrendFeed(xml);
-  const catalogEntries = [
-    ...(newResult.status === "fulfilled" ? newResult.value?.data || [] : []),
-    ...(popularResult.status === "fulfilled" ? popularResult.value?.data || [] : []),
-  ] as CatalogEntry[];
+  const newEntries = (newResult.status === "fulfilled" ? newResult.value?.data || [] : []) as CatalogEntry[];
+  const popularEntries = (popularResult.status === "fulfilled" ? popularResult.value?.data || [] : []) as CatalogEntry[];
+  const catalogEntries = [...newEntries, ...popularEntries];
   if (!catalogEntries.length) throw new Error("Anime catalog is unavailable");
-  const candidates = trendItems.flatMap(trend => {
-    const match = catalogEntries
-      .map(entry => ({ entry, score: trendMatchScore(trend.query, String(entry.title || "")) }))
-      .filter(candidate => candidate.score >= 0.7)
-      .sort((a, b) => b.score - a.score)[0];
-    if (!match) return [];
-    const animeSlug = slugFromEntry(match.entry);
-    return animeSlug ? [{ trend, animeSlug, catalogTitle: String(match.entry.title || "") }] : [];
-  });
 
-  return candidates.sort((a, b) => Number(b.trend.traffic.replace(/[^\d]/g, "")) - Number(a.trend.traffic.replace(/[^\d]/g, "")));
+  if (feedResult.status === "fulfilled" && feedResult.value.ok) {
+    const trendItems = parseTrendFeed(await feedResult.value.text());
+    const trendCandidates = trendItems.flatMap(trend => {
+      const match = catalogEntries
+        .map(entry => ({ entry, score: trendMatchScore(trend.query, String(entry.title || "")) }))
+        .filter(candidate => candidate.score >= 0.7)
+        .sort((a, b) => b.score - a.score)[0];
+      if (!match) return [];
+      const animeSlug = slugFromEntry(match.entry);
+      return animeSlug ? [{
+        query: trend.query,
+        traffic: trend.traffic,
+        animeSlug,
+        source: "google-trends" as const,
+      }] : [];
+    });
+
+    if (trendCandidates.length) {
+      return trendCandidates.sort((a, b) => Number(b.traffic.replace(/[^\d]/g, "")) - Number(a.traffic.replace(/[^\d]/g, "")));
+    }
+    console.info("[article-scheduler] No current Google Trends query matched anime in the catalog; using ranked anime fallback");
+  } else {
+    console.warn("[article-scheduler] Google Trends feed unavailable; using ranked anime fallback");
+  }
+
+  const seen = new Set<string>();
+  return popularEntries.flatMap(entry => {
+    const animeSlug = slugFromEntry(entry);
+    const query = String(entry.title || "").trim();
+    const key = animeSlug.toLowerCase();
+    if (!query || !animeSlug || seen.has(key)) return [];
+    seen.add(key);
+    return [{ query, traffic: "Pilihan katalog populer", animeSlug, source: "popular-catalog" as const }];
+  });
 }
 
 async function getAnimeFacts(slug: string): Promise<AnimeFacts> {
@@ -143,15 +168,13 @@ const responseSchema = {
     excerpt: { type: "string" },
     sections: {
       type: "array",
-      minItems: 4,
-      maxItems: 6,
       items: {
         type: "object",
         additionalProperties: false,
         required: ["heading", "paragraphs"],
         properties: {
           heading: { type: "string" },
-          paragraphs: { type: "array", minItems: 2, maxItems: 3, items: { type: "string" } },
+          paragraphs: { type: "array", items: { type: "string" } },
         },
       },
     },
@@ -196,7 +219,7 @@ function extractOutputText(response: { output?: Array<{ content?: Array<{ type?:
   return { text, citations };
 }
 
-async function generateDraft(query: string, traffic: string, facts: AnimeFacts, animeSlug: string) {
+async function generateDraft(query: string, traffic: string, facts: AnimeFacts, animeSlug: string, source: ArticleCandidate["source"]) {
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) throw new Error("OPENAI_API_KEY is not configured");
 
@@ -204,7 +227,7 @@ async function generateDraft(query: string, traffic: string, facts: AnimeFacts, 
     method: "POST",
     headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
     body: JSON.stringify({
-      model: process.env.OPENAI_ARTICLE_MODEL || "gpt-6-astra",
+      model: process.env.OPENAI_ARTICLE_MODEL || "gpt-6-luna",
       tools: [{ type: "web_search" }],
       max_output_tokens: 2400,
       text: {
@@ -218,17 +241,19 @@ async function generateDraft(query: string, traffic: string, facts: AnimeFacts, 
       instructions: [
         "Tulis artikel orisinal berbahasa Indonesia untuk pembaca AniStream, bukan halaman SEO doorway.",
         "Gunakan web search untuk memverifikasi konteks tren terkini dan fakta anime. Utamakan sumber resmi/primer.",
-        "Data Google Trends hanya menunjukkan pencarian yang sedang naik; jangan menyebutnya bukti popularitas umum atau mengarang alasan tren.",
+        source === "google-trends"
+          ? "Data Google Trends hanya menunjukkan pencarian yang sedang naik; jangan menyebutnya bukti popularitas umum atau mengarang alasan tren."
+          : "Topik dipilih dari peringkat popularitas katalog AniStream, bukan Google Trends atau volume pencarian; jangan mengklaim sebaliknya.",
         "Fakta anime yang diizinkan hanya data katalog yang diberikan. Jangan menyalin atau merekonstruksi sinopsis, dialog, lirik, atau artikel sumber.",
         "Jangan menebak tanggal tayang, plot, pemeran, studio, ketersediaan streaming, atau angka pencarian yang tidak tercantum pada sumber.",
         "Buat 4-6 bagian yang benar-benar membantu pembaca memahami tren, konteks yang dapat diverifikasi, dan informasi katalog. Hindari pengulangan kata kunci.",
         "Jangan sertakan URL atau daftar sumber dalam teks; tautan sitasi terverifikasi akan ditampilkan terpisah.",
       ].join(" "),
       input: JSON.stringify({
-        trendQuery: query,
-        approximateTrendTraffic: traffic,
+        topic: query,
+        topicSource: source === "google-trends" ? TRENDS_URL : "AniStream popular anime catalog ranking",
+        ...(source === "google-trends" ? { approximateTrendTraffic: traffic } : {}),
         animeFacts: facts,
-        trendsSource: TRENDS_URL,
         animePage: `${SITE_URL}/anime/${encodeURIComponent(animeSlug)}`,
       }),
     }),
@@ -267,9 +292,11 @@ export async function runArticleGeneration() {
   if (!(await beginArticleRun(slotKey))) return;
 
   try {
-    const candidates = await getTrendingAnime();
+    const candidates = await getArticleCandidates();
     for (const candidate of candidates) {
-      const trendKey = normalize(candidate.trend.query).slice(0, 191);
+      const trendKey = candidate.source === "google-trends"
+        ? normalize(candidate.query).slice(0, 191)
+        : `catalog:${candidate.animeSlug}`.slice(0, 191);
       if (!trendKey || await hasArticleForTrend(trendKey)) continue;
 
       let facts: AnimeFacts;
@@ -278,35 +305,40 @@ export async function runArticleGeneration() {
       } catch {
         continue;
       }
-      if (trendMatchScore(candidate.trend.query, facts.title) < 0.7) continue;
+      if (candidate.source === "google-trends" && trendMatchScore(candidate.query, facts.title) < 0.7) continue;
 
-      const { draft, citations } = await generateDraft(candidate.trend.query, candidate.trend.traffic, facts, candidate.animeSlug);
+      let generated: Awaited<ReturnType<typeof generateDraft>>;
+      try {
+        generated = await generateDraft(candidate.query, candidate.traffic, facts, candidate.animeSlug, candidate.source);
+      } catch (error) {
+        const reason = error instanceof Error ? error.message : "Article generation failed";
+        console.error(`[article-scheduler] Candidate rejected (${candidate.source}: ${candidate.query}): ${reason}`);
+        continue;
+      }
+      const { draft, citations } = generated;
       const article: PublishedArticle = {
         slug: slugify(draft.title),
         trendKey,
-        trendKeyword: candidate.trend.query,
-        trendTraffic: candidate.trend.traffic,
+        trendKeyword: candidate.query,
+        trendTraffic: candidate.traffic,
         title: draft.title,
         excerpt: draft.excerpt,
         animeSlug: candidate.animeSlug,
         sections: draft.sections,
         sources: [
-          { title: "Google Trends — Penelusuran Indonesia", url: TRENDS_URL },
+          ...(candidate.source === "google-trends" ? [{ title: "Google Trends — Penelusuran Indonesia", url: TRENDS_URL }] : []),
           { title: `Data katalog AniStream: ${facts.title}`, url: `${SITE_URL}/anime/${encodeURIComponent(candidate.animeSlug)}` },
           ...citations,
         ],
         publishedAt: new Date().toISOString(),
       };
-      if (!article.slug || !(await saveArticle(article))) {
-        await finishArticleRun(slotKey, "skipped", "Topik tren atau slug sudah pernah diterbitkan");
-        return;
-      }
+      if (!article.slug || !(await saveArticle(article))) continue;
       await finishArticleRun(slotKey, "published", article.slug);
-      console.info(`[article-scheduler] Published ${article.slug} for trend: ${candidate.trend.query}`);
+      console.info(`[article-scheduler] Published ${article.slug} for ${candidate.source}: ${candidate.query}`);
       return;
     }
 
-    await finishArticleRun(slotKey, "skipped", "Tidak ada topik anime tren yang memenuhi ambang kualitas dan keunikan");
+    await finishArticleRun(slotKey, "skipped", "No candidate passed anime metadata, source citation, article quality, and duplicate checks");
   } catch (error) {
     const detail = error instanceof Error ? error.message : "Unknown article generation error";
     await finishArticleRun(slotKey, "failed", detail).catch(() => undefined);
