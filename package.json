@@ -13,6 +13,7 @@
     "@tanstack/react-query-devtools": "^5.74.6",
     "axios": "1.21.0",
     "lucide-react": "^0.503.0",
+    "mysql2": "^3.24.6",
     "next": "16.4.5",
     "postcss": "8.5.32",
     "react": "^19.0.0",
