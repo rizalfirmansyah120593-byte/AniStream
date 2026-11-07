@@ -1,5 +1,6 @@
 import type { MetadataRoute } from "next";
 import { API_URL, SITE_URL } from "@/utils/config";
+import { getPublishedArticles } from "@/utils/articleStore";
 
 type Anime = {
   slug?: string;
@@ -39,6 +40,7 @@ const STATIC_ROUTES = [
   { path: "/category/ongoing", priority: 0.7, changeFrequency: "daily" as const },
   { path: "/category/completed", priority: 0.6, changeFrequency: "weekly" as const },
   { path: "/faq", priority: 0.3, changeFrequency: "monthly" as const },
+  { path: "/artikel", priority: 0.5, changeFrequency: "daily" as const },
   { path: "/about", priority: 0.2, changeFrequency: "yearly" as const },
   { path: "/contact", priority: 0.2, changeFrequency: "yearly" as const },
   { path: "/terms", priority: 0.1, changeFrequency: "yearly" as const },
@@ -148,9 +150,10 @@ async function getCollectionUrls(deadline: number) {
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const now = new Date();
   const deadline = Date.now() + GENERATION_TIMEOUT_MS;
-  const [{ slugs, modified }, collectionUrls] = await Promise.all([
+  const [{ slugs, modified }, collectionUrls, articles] = await Promise.all([
     getAnimeUrls(deadline),
     getCollectionUrls(deadline),
+    getPublishedArticles(100).catch(() => []),
   ]);
   const entries = [
     ...STATIC_ROUTES.map(route => ({
@@ -166,6 +169,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       changeFrequency: "daily" as const,
     })),
     ...collectionUrls,
+    ...articles.map(article => ({
+      url: `${SITE_URL}/artikel/${encodeURIComponent(article.slug)}`,
+      lastModified: new Date(article.publishedAt),
+      priority: 0.6,
+      changeFrequency: "monthly" as const,
+    })),
   ];
 
   // Deduplicate overlapping catalogs and stay within the sitemap protocol's
