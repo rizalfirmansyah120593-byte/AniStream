@@ -42,7 +42,7 @@ type ArticleCandidate = {
   query: string;
   traffic: string;
   animeSlug: string;
-  source: "google-trends" | "popular-catalog";
+  source: "google-trends" | "popular-catalog" | "recent-catalog";
 };
 
 const TRENDS_URL = "https://trends.google.com/trending/rss?geo=ID";
@@ -127,16 +127,23 @@ async function getArticleCandidates(): Promise<ArticleCandidate[]> {
     console.warn("[article-scheduler] Google Trends feed unavailable; using ranked anime fallback");
   }
 
+  const usePopularCatalog = popularEntries.length > 0;
+  const fallbackEntries = usePopularCatalog ? popularEntries : newEntries;
   const seen = new Set<string>();
-  const fallbackCandidates = popularEntries.flatMap(entry => {
+  const fallbackCandidates = fallbackEntries.flatMap(entry => {
     const animeSlug = slugFromEntry(entry);
     const query = String(entry.title || "").trim();
     const key = animeSlug.toLowerCase();
     if (!query || !animeSlug || seen.has(key)) return [];
     seen.add(key);
-    return [{ query, traffic: "Pilihan katalog populer", animeSlug, source: "popular-catalog" as const }];
+    return [{
+      query,
+      traffic: usePopularCatalog ? "Pilihan katalog populer" : "Anime terbaru di katalog",
+      animeSlug,
+      source: usePopularCatalog ? "popular-catalog" as const : "recent-catalog" as const,
+    }];
   });
-  console.info(`[article-scheduler] Ranked anime fallback candidates: ${fallbackCandidates.length}`);
+  console.info(`[article-scheduler] Catalog fallback candidates: ${fallbackCandidates.length} source=${usePopularCatalog ? "popular" : "latest"}`);
   return fallbackCandidates;
 }
 
@@ -248,7 +255,9 @@ async function generateDraft(query: string, traffic: string, facts: AnimeFacts, 
         "Gunakan web search untuk memverifikasi konteks tren terkini dan fakta anime. Utamakan sumber resmi/primer.",
         source === "google-trends"
           ? "Data Google Trends hanya menunjukkan pencarian yang sedang naik; jangan menyebutnya bukti popularitas umum atau mengarang alasan tren."
-          : "Topik dipilih dari peringkat popularitas katalog AniStream, bukan Google Trends atau volume pencarian; jangan mengklaim sebaliknya.",
+          : source === "popular-catalog"
+            ? "Topik dipilih dari peringkat popularitas katalog AniStream, bukan Google Trends atau volume pencarian; jangan mengklaim sebaliknya."
+            : "Topik dipilih dari daftar anime terbaru katalog AniStream, bukan Google Trends atau volume pencarian; jangan mengklaim sebaliknya.",
         "Fakta anime yang diizinkan hanya data katalog yang diberikan. Jangan menyalin atau merekonstruksi sinopsis, dialog, lirik, atau artikel sumber.",
         "Jangan menebak tanggal tayang, plot, pemeran, studio, ketersediaan streaming, atau angka pencarian yang tidak tercantum pada sumber.",
         "Buat 4-6 bagian yang benar-benar membantu pembaca memahami tren, konteks yang dapat diverifikasi, dan informasi katalog. Hindari pengulangan kata kunci.",
@@ -302,7 +311,7 @@ export async function runArticleGeneration() {
 
   try {
     const candidates = await getArticleCandidates();
-    for (const candidate of candidates) {
+    for (const candidate of candidates.slice(0, 3)) {
       const trendKey = candidate.source === "google-trends"
         ? normalize(candidate.query).slice(0, 191)
         : `catalog:${candidate.animeSlug}`.slice(0, 191);

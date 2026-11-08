@@ -110,11 +110,21 @@ function mapArticle(row: Record<string, unknown>): PublishedArticle {
 
 export async function beginArticleRun(slotKey: string) {
   await ensureArticleSchema();
-  const [result] = await getPool().execute(
+  const connection = getPool();
+  const [insertResult] = await connection.execute(
     "INSERT IGNORE INTO article_generation_runs (slot_key, status) VALUES (?, 'running')",
     [slotKey],
   );
-  return (result as { affectedRows: number }).affectedRows === 1;
+  if ((insertResult as { affectedRows: number }).affectedRows === 1) return true;
+
+  const [retryResult] = await connection.execute(
+    `UPDATE article_generation_runs
+     SET status = 'running', detail = NULL, started_at = CURRENT_TIMESTAMP, finished_at = NULL
+     WHERE slot_key = ?
+       AND (status IN ('skipped', 'failed') OR (status = 'running' AND started_at < UTC_TIMESTAMP() - INTERVAL 20 MINUTE))`,
+    [slotKey],
+  );
+  return (retryResult as { affectedRows: number }).affectedRows === 1;
 }
 
 export async function finishArticleRun(
