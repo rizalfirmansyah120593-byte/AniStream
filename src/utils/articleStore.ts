@@ -121,7 +121,7 @@ export async function beginArticleRun(slotKey: string) {
     `UPDATE article_generation_runs
      SET status = 'running', detail = NULL, started_at = CURRENT_TIMESTAMP, finished_at = NULL
      WHERE slot_key = ?
-       AND (status IN ('skipped', 'failed') OR (status = 'running' AND started_at < UTC_TIMESTAMP() - INTERVAL 20 MINUTE))`,
+       AND (status IN ('skipped', 'failed') OR (status = 'running' AND started_at < UTC_TIMESTAMP() - INTERVAL 2 MINUTE))`,
     [slotKey],
   );
   return (retryResult as { affectedRows: number }).affectedRows === 1;
