@@ -43,11 +43,68 @@ type ArticleCandidate = {
   traffic: string;
   animeSlug: string;
   source: "google-trends" | "popular-catalog" | "recent-catalog";
+  format: ArticleFormat;
 };
+
+type ArticleFormat =
+  | "seasonal-guide"
+  | "episode-update"
+  | "recommendation"
+  | "watch-order"
+  | "story-explainer";
 
 const TRENDS_URL = "https://trends.google.com/trending/rss?geo=ID";
 const MAX_ARTICLE_CHARS = 8000;
 const MIN_ARTICLE_CHARS = 1600;
+const ARTICLE_FORMATS: ArticleFormat[] = [
+  "seasonal-guide",
+  "episode-update",
+  "recommendation",
+  "watch-order",
+  "story-explainer",
+];
+const FORMAT_LABELS: Record<ArticleFormat, string> = {
+  "seasonal-guide": "Jadwal anime musiman",
+  "episode-update": "Update episode terbaru",
+  recommendation: "Rekomendasi anime",
+  "watch-order": "Panduan urutan nonton",
+  "story-explainer": "Pembahasan cerita dan teori",
+};
+const WATCH_ORDER_FRANCHISES = [
+  "fate",
+  "monogatari",
+  "attack on titan",
+  "shingeki no kyojin",
+  "naruto",
+  "one piece",
+  "jujutsu kaisen",
+  "solo leveling",
+];
+
+function formatForSlot(date = new Date()): ArticleFormat {
+  const slot = Math.floor(date.getTime() / (2 * 60 * 60 * 1000));
+  return ARTICLE_FORMATS[slot % ARTICLE_FORMATS.length];
+}
+
+function getCurrentAnimeSeason(date = new Date()) {
+  const month = date.getUTCMonth();
+  const season = month < 3 ? "Winter"
+    : month < 6 ? "Spring"
+      : month < 9 ? "Summer"
+        : month < 11 ? "Fall"
+          : "Winter";
+  const year = date.getUTCFullYear() + (month === 11 ? 1 : 0);
+  return `${season} ${year}`;
+}
+
+function hasWatchOrderCoverage(title: string) {
+  return getWatchOrderFranchise(title) !== null;
+}
+
+function getWatchOrderFranchise(title: string) {
+  const normalizedTitle = normalize(title);
+  return WATCH_ORDER_FRANCHISES.find(franchise => normalizedTitle.includes(normalize(franchise))) || null;
+}
 
 function slugFromEntry(entry: CatalogEntry) {
   const raw = entry.slug || entry.detail_url || entry.link || "";
@@ -89,7 +146,7 @@ async function fetchJson(url: string, timeoutMs = 5000) {
   return response.json();
 }
 
-async function getArticleCandidates(): Promise<ArticleCandidate[]> {
+async function getArticleCandidates(format: ArticleFormat): Promise<ArticleCandidate[]> {
   const [feedResult, newResult, popularResult] = await Promise.allSettled([
     fetch(TRENDS_URL, { signal: AbortSignal.timeout(6000), cache: "no-store" }),
     fetchJson(`${API_URL}/new-anime?page=1`),
@@ -115,19 +172,28 @@ async function getArticleCandidates(): Promise<ArticleCandidate[]> {
         traffic: trend.traffic,
         animeSlug,
         source: "google-trends" as const,
+        format,
       }] : [];
     });
 
     if (trendCandidates.length) {
       console.info(`[article-scheduler] Matched ${trendCandidates.length} current Google Trends queries to anime`);
-      return trendCandidates.sort((a, b) => Number(b.traffic.replace(/[^\d]/g, "")) - Number(a.traffic.replace(/[^\d]/g, "")));
+      const candidates = format === "watch-order"
+        ? trendCandidates.filter(candidate => {
+          const entry = catalogEntries.find(item => slugFromEntry(item) === candidate.animeSlug);
+          return hasWatchOrderCoverage(String(entry?.title || candidate.query));
+        })
+        : trendCandidates;
+      if (candidates.length) {
+        return candidates.sort((a, b) => Number(b.traffic.replace(/[^\d]/g, "")) - Number(a.traffic.replace(/[^\d]/g, "")));
+      }
     }
-    console.info("[article-scheduler] No current Google Trends query matched anime in the catalog; using ranked anime fallback");
+    console.info(`[article-scheduler] No usable trend match for ${format}; using catalogue fallback`);
   } else {
     console.warn("[article-scheduler] Google Trends feed unavailable; using ranked anime fallback");
   }
 
-  const usePopularCatalog = popularEntries.length > 0;
+  const usePopularCatalog = format === "recommendation" || format === "watch-order" || format === "story-explainer";
   const fallbackEntries = usePopularCatalog ? popularEntries : newEntries;
   const seen = new Set<string>();
   const fallbackCandidates = fallbackEntries.flatMap(entry => {
@@ -135,12 +201,14 @@ async function getArticleCandidates(): Promise<ArticleCandidate[]> {
     const query = String(entry.title || "").trim();
     const key = animeSlug.toLowerCase();
     if (!query || !animeSlug || seen.has(key)) return [];
+    if (format === "watch-order" && !hasWatchOrderCoverage(query)) return [];
     seen.add(key);
     return [{
       query,
       traffic: usePopularCatalog ? "Pilihan katalog populer" : "Anime terbaru di katalog",
       animeSlug,
       source: usePopularCatalog ? "popular-catalog" as const : "recent-catalog" as const,
+      format,
     }];
   });
   console.info(`[article-scheduler] Catalog fallback candidates: ${fallbackCandidates.length} source=${usePopularCatalog ? "popular" : "latest"}`);
@@ -230,11 +298,26 @@ function extractOutputText(response: { output?: Array<{ content?: Array<{ type?:
   return { text, citations };
 }
 
-async function generateDraft(query: string, traffic: string, facts: AnimeFacts, animeSlug: string, source: ArticleCandidate["source"]) {
+async function generateDraft(
+  query: string,
+  traffic: string,
+  facts: AnimeFacts,
+  animeSlug: string,
+  source: ArticleCandidate["source"],
+  format: ArticleFormat,
+) {
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) throw new Error("OPENAI_API_KEY is not configured");
 
-  console.info(`[article-scheduler] Requesting sourced article for ${source}: ${query}`);
+  const season = getCurrentAnimeSeason();
+  const formatInstructions: Record<ArticleFormat, string> = {
+    "seasonal-guide": `Buat panduan musiman bertarget keyword "jadwal rilis anime ${season}" dan "anime terbaru ${season}". Sajikan jadwal/tanggal/jam hanya jika terverifikasi dari pengumuman resmi yang ditemukan lewat web search. Jika jadwal lengkap belum tersedia, jelaskan status konfirmasi dan fokus pada daftar judul yang telah diumumkan; jangan mengarang jadwal. Cantumkan tanggal pembaruan dalam artikel.`,
+    "episode-update": `Buat artikel informatif bertarget keyword "anime terbaru hari ini" dan "${facts.title} episode ${facts.latestEpisode} sub Indo". Nomor episode yang diketahui dari katalog adalah ${facts.latestEpisode || "tidak tersedia"}. Verifikasi tanggal dan jam tayang hanya dari sumber resmi. Jika tidak ada jadwal terverifikasi, jelaskan bahwa waktu rilis belum dapat dipastikan, jangan menebaknya.`,
+    recommendation: `Buat listicle rekomendasi anime berdasarkan genre/fakta katalog ${facts.genres.join(", ") || "yang terverifikasi melalui web search"}, dengan keyword long-tail alami seperti "rekomendasi anime ${facts.genres[0] || "terbaik"}". Berikan kriteria inklusi yang jelas, variasi pilihan, serta alasan faktual mengapa tiap judul cocok. Jangan mengarang rating, status tamat, jumlah episode, atau kualitas animasi.`,
+    "watch-order": `Buat panduan urutan nonton franchise ${facts.title} dengan keyword "urutan nonton ${facts.title} lengkap". Riset urutan dari sumber resmi atau referensi tepercaya, bedakan urutan rilis dan urutan kronologis jika keduanya relevan, dan tandai film/OVA opsional. Jangan mengada-adakan judul atau urutan.`,
+    "story-explainer": `Buat pembahasan cerita yang bertarget query "${query}" dan terkait ${facts.title}. Verifikasi fakta cerita melalui sumber primer/resmi dan sumber tepercaya. Beri label SPOILER yang jelas, jelaskan konteks tanpa menyatakan teori sebagai fakta, dan jangan mereproduksi dialog, sinopsis panjang, atau teks berhak cipta.`,
+  };
+  console.info(`[article-scheduler] Requesting ${format} article for ${source}: ${query}`);
   const response = await fetch("https://api.openai.com/v1/responses", {
     method: "POST",
     headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
@@ -252,19 +335,25 @@ async function generateDraft(query: string, traffic: string, facts: AnimeFacts, 
       },
       instructions: [
         "Tulis artikel orisinal berbahasa Indonesia untuk pembaca AniStream, bukan halaman SEO doorway.",
-        "Gunakan web search untuk memverifikasi konteks tren terkini dan fakta anime. Utamakan sumber resmi/primer.",
+        "Gunakan web search untuk memverifikasi setiap klaim terkini. Utamakan situs resmi anime, penerbit, distributor, broadcaster, atau pengumuman produksi; gunakan media tepercaya sebagai konfirmasi independen.",
+        formatInstructions[format],
         source === "google-trends"
           ? "Data Google Trends hanya menunjukkan pencarian yang sedang naik; jangan menyebutnya bukti popularitas umum atau mengarang alasan tren."
           : source === "popular-catalog"
             ? "Topik dipilih dari peringkat popularitas katalog AniStream, bukan Google Trends atau volume pencarian; jangan mengklaim sebaliknya."
             : "Topik dipilih dari daftar anime terbaru katalog AniStream, bukan Google Trends atau volume pencarian; jangan mengklaim sebaliknya.",
         "Fakta anime yang diizinkan hanya data katalog yang diberikan. Jangan menyalin atau merekonstruksi sinopsis, dialog, lirik, atau artikel sumber.",
-        "Jangan menebak tanggal tayang, plot, pemeran, studio, ketersediaan streaming, atau angka pencarian yang tidak tercantum pada sumber.",
-        "Buat 4-6 bagian yang benar-benar membantu pembaca memahami tren, konteks yang dapat diverifikasi, dan informasi katalog. Hindari pengulangan kata kunci.",
+        "Jangan menebak tanggal/jam tayang, plot, urutan franchise, pemeran, studio, rating, jumlah episode, ketersediaan streaming, atau angka pencarian. Pisahkan fakta sumber dari analisis/opini.",
+        "Buat judul dan heading yang menjawab search intent, gunakan keyword utama sewajarnya pada judul, pembuka, dan satu heading tanpa keyword stuffing. Tulis jawaban ringkas dan langsung di awal agar mudah dipahami pembaca dan answer engine.",
+        "Buat 4-6 bagian substantif yang benar-benar membantu pembaca, memakai detail spesifik yang terverifikasi dan informasi katalog. Hindari pengulangan, paragraf pengisi, klaim superlatif tanpa bukti, dan konten tipis.",
+        "Tambahkan bagian tanggal pembaruan bila membahas jadwal atau tren yang cepat berubah. Jangan mengklaim artikel diperbarui di tanggal lain.",
         "Jangan sertakan URL atau daftar sumber dalam teks; tautan sitasi terverifikasi akan ditampilkan terpisah.",
       ].join(" "),
       input: JSON.stringify({
         topic: query,
+        contentFormat: format,
+        contentCategory: FORMAT_LABELS[format],
+        seasonalFocus: format === "seasonal-guide" ? season : undefined,
         topicSource: source === "google-trends" ? TRENDS_URL : "AniStream popular anime catalog ranking",
         ...(source === "google-trends" ? { approximateTrendTraffic: traffic } : {}),
         animeFacts: facts,
@@ -303,20 +392,16 @@ function makeSlotKey(date = new Date()) {
 
 export async function runArticleGeneration() {
   const slotKey = makeSlotKey();
+  const format = formatForSlot();
   if (!(await beginArticleRun(slotKey))) {
     console.info(`[article-scheduler] Slot ${slotKey} was already processed`);
     return;
   }
-  console.info(`[article-scheduler] Processing article slot ${slotKey}`);
+  console.info(`[article-scheduler] Processing article slot ${slotKey} with format ${format}`);
 
   try {
-    const candidates = await getArticleCandidates();
+    const candidates = await getArticleCandidates(format);
     for (const candidate of candidates.slice(0, 3)) {
-      const trendKey = candidate.source === "google-trends"
-        ? normalize(candidate.query).slice(0, 191)
-        : `catalog:${candidate.animeSlug}`.slice(0, 191);
-      if (!trendKey || await hasArticleForTrend(trendKey)) continue;
-
       let facts: AnimeFacts;
       try {
         facts = await getAnimeFacts(candidate.animeSlug);
@@ -325,9 +410,33 @@ export async function runArticleGeneration() {
       }
       if (candidate.source === "google-trends" && trendMatchScore(candidate.query, facts.title) < 0.7) continue;
 
+      const topicIdentity = format === "seasonal-guide"
+        ? normalize(getCurrentAnimeSeason())
+        : format === "episode-update"
+          ? `catalog:${candidate.animeSlug}:episode-${normalize(facts.latestEpisode)}`
+          : format === "recommendation"
+            ? `genre:${normalize(facts.genres[0] || candidate.query)}`
+            : format === "watch-order"
+              ? `franchise:${normalize(getWatchOrderFranchise(facts.title) || facts.title)}`
+              : candidate.source === "google-trends"
+                ? normalize(candidate.query)
+                : `catalog:${candidate.animeSlug}`;
+      const trendKey = `${format}:${topicIdentity}`;
+      const dedupeKey = trendKey.slice(0, 191);
+      if (!dedupeKey || await hasArticleForTrend(dedupeKey)) continue;
+
       let generated: Awaited<ReturnType<typeof generateDraft>>;
       try {
-        generated = await generateDraft(candidate.query, candidate.traffic, facts, candidate.animeSlug, candidate.source);
+        if (format === "episode-update" && !facts.latestEpisode) continue;
+        if (format === "watch-order" && !hasWatchOrderCoverage(facts.title)) continue;
+        generated = await generateDraft(
+          candidate.query,
+          candidate.traffic,
+          facts,
+          candidate.animeSlug,
+          candidate.source,
+          format,
+        );
       } catch (error) {
         const reason = error instanceof Error ? error.message : "Article generation failed";
         console.error(`[article-scheduler] Candidate rejected (${candidate.source}: ${candidate.query}): ${reason}`);
@@ -336,7 +445,7 @@ export async function runArticleGeneration() {
       const { draft, citations } = generated;
       const article: PublishedArticle = {
         slug: slugify(draft.title),
-        trendKey,
+        trendKey: dedupeKey,
         trendKeyword: candidate.query,
         trendTraffic: candidate.traffic,
         title: draft.title,

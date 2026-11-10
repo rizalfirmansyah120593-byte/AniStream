@@ -51,7 +51,7 @@ If you enjoy this project and want to support the development, you can scan the 
 Atau klik link ini: [**Donasi via Saweria**](https://saweria.co/RizalFirmansyah)
 ## Automatic trend articles
 
-AniStream checks Indonesia's public Google Trends RSS feed every two hours. It publishes only when a trending query closely matches anime in the catalog, the source metadata passes a completeness check, and web research returns citations from at least two independent sites. A slot is skipped when no suitable topic or evidence is available. Articles are stored in Hostinger MySQL and served from `/artikel`.
+AniStream checks Indonesia's public Google Trends RSS feed every two hours and rotates article formats: seasonal release guides, latest-episode updates, genre-based recommendations, franchise watch orders, and story explanations. It only uses anime topics matched to the catalog, verifies current claims with web search, and requires citations from at least two independent sites. Release dates, episode information, franchise order, and plot claims must be sourced; unsupported topics are skipped rather than filled with guesses. Articles are stored in Hostinger MySQL and served from `/artikel`, with internal links to relevant anime and discovery pages.
 
 To enable publishing, add `OPENAI_API_KEY` and set `ARTICLE_AUTOPUBLISH_ENABLED=true` in the Hostinger Node.js environment settings. Keep the API key there; do not commit it or send it in chat. The default model is `gpt-6-astra`. Disable publishing with `ARTICLE_AUTOPUBLISH_ENABLED=false`. OpenAI model and web-search use may incur charges; set an appropriate account spending limit. The scheduler uses UTC two-hour slots.
 

@@ -34,6 +34,8 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
     "@id": `${canonical}#article`,
     headline: article.title,
     description: article.excerpt,
+    keywords: [article.trendKeyword, article.trendTraffic, article.animeSlug],
+    articleSection: article.trendKey.split(":")[0].replace(/-/g, " "),
     datePublished: article.publishedAt,
     dateModified: article.publishedAt,
     inLanguage: "id-ID",
@@ -49,7 +51,10 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
       <JsonLd data={schema} />
       <article className="mx-auto max-w-3xl">
         <Link href="/artikel" className="text-sm text-red-400 hover:text-red-300">← Semua artikel</Link>
-        <p className="mt-6 text-sm text-gray-400">Topik: {article.trendKeyword} · {article.trendTraffic} · {new Intl.DateTimeFormat("id-ID", { dateStyle: "long", timeZone: "UTC" }).format(new Date(article.publishedAt))}</p>
+        <p className="mt-6 text-sm text-gray-400">
+          {article.trendKey.split(":")[0].replace(/-/g, " ")} · Topik: {article.trendKeyword} ·{" "}
+          {new Intl.DateTimeFormat("id-ID", { dateStyle: "long", timeZone: "UTC" }).format(new Date(article.publishedAt))}
+        </p>
         <h1 className="mt-3 text-3xl font-bold md:text-4xl">{article.title}</h1>
         <p className="mt-5 text-lg leading-8 text-gray-300">{article.excerpt}</p>
         <div className="mt-10 space-y-8">
@@ -70,7 +75,17 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
             ))}
           </ul>
         </aside>
-        <p className="mt-8 text-sm text-gray-400">Lihat juga <Link href={`/anime/${encodeURIComponent(article.animeSlug)}`} className="text-red-400 underline">informasi anime di AniStream</Link>. Artikel ini merangkum fakta bersumber dan tidak menggantikan pengumuman resmi.</p>
+        <nav aria-label="Jelajahi anime terkait" className="mt-8 rounded-lg border border-gray-700 bg-gray-900 p-5">
+          <h2 className="font-semibold text-white">Jelajahi lebih lanjut di AniStream</h2>
+          <div className="mt-3 flex flex-wrap gap-x-5 gap-y-2 text-sm">
+            <Link href={`/anime/${encodeURIComponent(article.animeSlug)}`} className="text-red-400 underline">Detail anime terkait</Link>
+            <Link href="/latest" className="text-red-400 underline">Anime terbaru</Link>
+            <Link href="/category/ongoing" className="text-red-400 underline">Anime ongoing</Link>
+            <Link href="/genres" className="text-red-400 underline">Jelajahi genre</Link>
+            <Link href="/schedule" className="text-red-400 underline">Jadwal rilis</Link>
+          </div>
+          <p className="mt-4 text-sm text-gray-400">Artikel ini merangkum fakta bersumber dan tidak menggantikan pengumuman resmi.</p>
+        </nav>
       </article>
     </main>
   );
