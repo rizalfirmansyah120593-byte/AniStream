@@ -15,6 +15,7 @@ import { Play, Plus, Check, ThumbsUp, Info, Volume2, VolumeX, X, ArrowUpDown, Ar
 import { isInMyList, toggleMyList, isAnimeLiked, toggleLikeAnime } from "@/utils/myList";
 import groupByProvider from "@/utils/groupByProvider";
 import { API_URL } from '@/utils/config';
+import { useDonationPrompt } from "@/components/DonationPrompt";
 
 async function fetchAnimeDetail(id: string) {
   const { data } = await axios.get(
@@ -61,6 +62,7 @@ interface AnimePageProps {
 
 export default function AnimeClient(props: AnimePageProps) {
   const { id } = use(props.params);
+  const { requestPlay } = useDonationPrompt();
   const [isMuted, setIsMuted] = useState(true);
   const [isInList, setIsInList] = useState(false);
   const [isLiked, setIsLiked] = useState(false);
@@ -398,7 +400,7 @@ export default function AnimeClient(props: AnimePageProps) {
               <div className="flex items-center gap-2 md:gap-3 flex-wrap">
                 {data.episodes && data.episodes.length > 0 ? (
                   <button 
-                    onClick={handlePlayLatest}
+                    onClick={() => requestPlay(handlePlayLatest)}
                     className="bg-white hover:bg-gray-200 text-black font-semibold py-1.5 px-3 sm:py-2 sm:px-4 md:py-3 md:px-8 rounded flex items-center gap-1.5 sm:gap-2 transition-all text-xs sm:text-sm md:text-base"
                   >
                     <Play className="w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 fill-black" />

@@ -5,6 +5,7 @@ import axios from "axios";
 import { X, Play, Clock, Server, Loader2, MonitorPlay } from "lucide-react";
 import groupByProvider from "@/utils/groupByProvider";
 import { API_URL } from '@/utils/config';
+import { useDonationPrompt } from "@/components/DonationPrompt";
 
 interface EpisodeCardProps {
   episodeNumber: number;
@@ -37,6 +38,7 @@ const EpisodeCard: React.FC<EpisodeCardProps> = ({
   img,
   detail_eps,
 }) => {
+  const { requestPlay } = useDonationPrompt();
   const [popup, setPopup] = useState(false);
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
   const [isHovered, setIsHovered] = useState(false);
@@ -131,7 +133,7 @@ const EpisodeCard: React.FC<EpisodeCardProps> = ({
     <Fragment>
       {/* Episode Card - Netflix Style */}
       <div
-        onClick={fetchEpisodeDetailsOnTrigger}
+        onClick={() => requestPlay(fetchEpisodeDetailsOnTrigger)}
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
         className="group relative bg-gray-900 rounded-md overflow-hidden cursor-pointer hover:bg-gray-800 transition-all duration-300"

@@ -6,6 +6,7 @@ import { usePathname } from 'next/navigation';
 import Image from 'next/image';
 import { API_URL } from '@/utils/config';
 import { LANGUAGES, useLanguage } from '@/components/LanguageProvider';
+import { useDonationPrompt } from '@/components/DonationPrompt';
 
 interface NotificationAnime {
   img: string;
@@ -36,6 +37,7 @@ const Navbar = () => {
   const notificationRef = useRef<HTMLDivElement>(null);
   const pathname = usePathname();
   const { language, setLanguage, t } = useLanguage();
+  const { openDonation } = useDonationPrompt();
 
   // Close mobile menu when route changes
   useEffect(() => {
@@ -144,6 +146,17 @@ const Navbar = () => {
 
           {/* Right Icons */}
           <div className='flex flex-shrink-0 items-center gap-3 md:gap-5'>
+            <button
+              aria-label="Donasi untuk mendukung pemulihan kebakaran hutan dan lahan"
+              className="inline-flex items-center gap-1.5 rounded-full border border-emerald-300/40 bg-gradient-to-r from-emerald-500 to-lime-400 px-2.5 py-2 text-xs font-extrabold text-emerald-950 shadow-[0_0_18px_rgba(74,222,128,0.2)] transition hover:-translate-y-0.5 hover:from-emerald-400 hover:to-lime-300 hover:shadow-[0_0_24px_rgba(74,222,128,0.35)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-lime-200 sm:px-3"
+              onClick={openDonation}
+              title="Donasi untuk kepedulian Karhutla"
+              type="button"
+            >
+              <Heart className="h-4 w-4 fill-current" aria-hidden="true" />
+              <span className="hidden min-[400px]:inline sm:hidden">Donasi</span>
+              <span className="hidden whitespace-nowrap sm:inline">Donasi Karhutla</span>
+            </button>
             <label className="flex items-center gap-1.5 text-gray-300" title={t('language')}>
               <Languages className="w-5 h-5" aria-hidden="true" />
               <select

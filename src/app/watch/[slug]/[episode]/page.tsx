@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { JsonLd } from "@/components/Seo/JsonLd";
 import { episodePath, getAnime, getAnimeDescription, getEpisode, getPoster } from "@/utils/anime";
 import { API_URL, SITE_URL } from "@/utils/config";
+import { WatchPlaybackGate } from "./WatchPlaybackGate";
 
 type Props = {
   params: Promise<{ slug: string; episode: string }>;
@@ -120,15 +121,10 @@ export default async function WatchPage({ params }: Props) {
       <p className="mt-3 max-w-3xl text-gray-300">{description}</p>
 
       {data.videoUrl ? (
-        <div className="mt-6 aspect-video overflow-hidden rounded-lg bg-black">
-          <iframe
-            src={data.videoUrl}
-            title={`${title} ${episodeTitle}`}
-            className="h-full w-full"
-            allowFullScreen
-            loading="lazy"
-          />
-        </div>
+        <WatchPlaybackGate
+          src={data.videoUrl}
+          title={`${title} ${episodeTitle}`}
+        />
       ) : (
         <p className="mt-6 rounded-lg bg-gray-900 p-5 text-gray-300">
           Server video sedang tidak tersedia. Silakan coba lagi beberapa saat lagi.

@@ -14,6 +14,7 @@ import { Play, Plus, Check, ThumbsUp, Volume2, VolumeX, X, ArrowUp, ArrowDown, A
 import { isInMyList, toggleMyList, isAnimeLiked, toggleLikeAnime } from "@/utils/myList";
 import groupByProvider from "@/utils/groupByProvider";
 import { API_URL } from '@/utils/config';
+import { useDonationPrompt } from "@/components/DonationPrompt";
 
 async function fetchAnimeDetail() {
   const { data } = await axios.get(
@@ -52,6 +53,7 @@ const majorArcs = [
 ];
 
 const OnePiecePage = () => {
+  const { requestPlay } = useDonationPrompt();
   const [isMuted, setIsMuted] = useState(true);
   const [isInList, setIsInList] = useState(false);
   const [isLiked, setIsLiked] = useState(false);
@@ -348,7 +350,7 @@ const OnePiecePage = () => {
               {/* Action Buttons - Pirate Theme */}
               <div className="flex items-center gap-2 md:gap-3 flex-wrap">
                 <button 
-                  onClick={handlePlayLatest}
+                  onClick={() => requestPlay(handlePlayLatest)}
                   className="bg-gradient-to-r from-red-600 to-red-700 hover:from-red-500 hover:to-red-600 text-white font-bold py-2 px-4 sm:py-3 sm:px-6 md:py-4 md:px-10 rounded-lg flex items-center gap-2 transition-all shadow-lg shadow-red-500/30 border border-red-400/30 text-sm sm:text-base"
                 >
                   <Play className="w-5 h-5 md:w-6 md:h-6 fill-white" />
@@ -506,7 +508,7 @@ const OnePiecePage = () => {
             ) => (
               <div
                 key={index}
-                onClick={() => handlePlayEpisode(episode.detail_eps)}
+                onClick={() => requestPlay(() => handlePlayEpisode(episode.detail_eps))}
                 className="group relative bg-gradient-to-br from-[#1a3a5c] to-[#0d2137] rounded-lg overflow-hidden border border-sky-500/20 hover:border-yellow-500/50 transition-all hover:scale-[1.02] hover:shadow-xl hover:shadow-yellow-500/10 cursor-pointer"
               >
                 {/* Episode Image */}
