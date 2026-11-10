@@ -1,6 +1,13 @@
+import type { Metadata } from "next";
 import InfoPage from "@/components/InfoPage";
 import { JsonLd } from "@/components/Seo/JsonLd";
 import { SITE_URL } from "@/utils/config";
+
+export const metadata: Metadata = {
+  title: "FAQ AniStream",
+  description: "Jawaban tentang cara menonton anime, ketersediaan server, dan fitur AniStream.",
+  alternates: { canonical: `${SITE_URL}/faq` },
+};
 
 export default function FAQPage() {
   const questions = [

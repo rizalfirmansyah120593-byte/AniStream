@@ -34,6 +34,9 @@ async function getInitialNewAnime() {
 
 export default async function HomePage() {
   const initialNewAnime = await getInitialNewAnime();
+  const latestAnime = Array.isArray((initialNewAnime as { data?: unknown[] })?.data)
+    ? ((initialNewAnime as { data: Array<{ title?: string; link?: string; slug?: string }> }).data)
+    : [];
   const schema = {
     "@context": "https://schema.org",
     "@type": "CollectionPage",
@@ -43,6 +46,16 @@ export default async function HomePage() {
     url: SITE_URL,
     isPartOf: { "@id": `${SITE_URL}/#website` },
     about: { "@id": `${SITE_URL}/#organization` },
+    mainEntity: {
+      "@type": "ItemList",
+      name: "Anime terbaru di AniStream",
+      numberOfItems: latestAnime.length,
+      itemListElement: latestAnime.slice(0, 14).map((anime: { title?: string; link?: string; slug?: string }, index: number) => {
+        const rawSlug = anime.slug || anime.link || "";
+        const slug = rawSlug.split("?")[0].split("/").filter(Boolean).pop() || "";
+        return { "@type": "ListItem", position: index + 1, name: anime.title || slug, url: `${SITE_URL}/anime/${encodeURIComponent(slug)}` };
+      }).filter((item: { name: string; url: string }) => item.name && item.url !== `${SITE_URL}/anime/`)
+    },
   };
 
   return (

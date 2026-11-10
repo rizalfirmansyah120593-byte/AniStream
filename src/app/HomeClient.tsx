@@ -16,7 +16,6 @@ import Footer from "@/components/Footer";
 import { X, Play, Info, Plus, Check, Star, Calendar, Film, Clock, Volume2, VolumeX } from "lucide-react";
 import { getTrailerBySlug, getYouTubeEmbedUrl } from "@/utils/animeTrailers";
 import { isInMyList, toggleMyList, getMyList } from "@/utils/myList";
-import { API_URL } from '@/utils/config';
 import { AdsterraNative, AdsterraBanner } from '@/components/Ads/AdsterraAd';
 
 // create types for anime data
@@ -35,7 +34,7 @@ interface Anime {
 
 async function fetchNewAnime() {
   const { data } = await axios.get(
-    `${API_URL}/new-anime`, { timeout: 10000 }
+    "/api/anime/new-anime", { timeout: 10000 }
   );
   return data;
 }
@@ -364,14 +363,14 @@ export default function Home({ initialNewAnime }: HomeClientProps) {
         <div className="md:hidden"><AdsterraBanner size="320x50" /></div>
         <ListItemHorizontal 
           title="On Going Anime" 
-          apifetch={`${API_URL}/ongoing-anime`} 
+          apifetch="/api/anime/ongoing-anime" 
           queryKey="on-going-anime" 
           categorySlug="ongoing"
           variant="ongoing"
         />
         <ListItemHorizontal 
           title="Completed Anime" 
-          apifetch={`${API_URL}/completed-anime`} 
+          apifetch="/api/anime/completed-anime" 
           queryKey="completed-anime" 
           categorySlug="completed"
           variant="completed"
@@ -385,7 +384,7 @@ export default function Home({ initialNewAnime }: HomeClientProps) {
           <DeferredSection key={`genre-${genre.id}`} title={genre.title}>
             <ListItemHorizontal
               title={genre.title}
-              apifetch={`${API_URL}/genre-anime/${genre.id}`}
+              apifetch={`/api/anime/genre-anime/${genre.id}`}
               queryKey={`genre-${genre.id}`}
               seeAllHref={`/genres/${genre.id}`}
             />
@@ -396,7 +395,7 @@ export default function Home({ initialNewAnime }: HomeClientProps) {
             <TypeAnimeList
               title={type.title}
               typeValue={type.typeValue}
-              apifetch={`${API_URL}/type-anime/${type.typeValue}`}
+              apifetch={`/api/anime/type-anime/${type.typeValue}`}
               queryKey={type.queryKey}
               seeAllHref={`/type/${type.typeValue}`}
             />

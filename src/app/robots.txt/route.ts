@@ -9,7 +9,7 @@ export function GET() {
     "Disallow: /profile",
     "Disallow: /search",
     "",
-    "Content-Signal: search=yes, ai-train=no",
+    "Content-Signal: search=yes",
     "",
     `Sitemap: ${SITE_URL}/sitemap.xml`,
     "",

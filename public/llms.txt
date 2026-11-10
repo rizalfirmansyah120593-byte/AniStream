@@ -6,8 +6,15 @@
 - [Home](https://anistreaming.com/): Browse recent anime and featured sections.
 - [Latest anime](https://anistreaming.com/latest)
 - [Popular anime](https://anistreaming.com/popular)
+- [Anime by type](https://anistreaming.com/type)
+- [Ongoing anime](https://anistreaming.com/category/ongoing)
+- [Completed anime](https://anistreaming.com/category/completed)
 - [Genres](https://anistreaming.com/genres)
 - [Schedule](https://anistreaming.com/schedule)
+- [Panduan anime terbaru dan ongoing](https://anistreaming.com/panduan)
+- [Cara menemukan anime terbaru sub Indo](https://anistreaming.com/panduan/anime-terbaru-sub-indo)
+- [Memilih anime ongoing terbaik](https://anistreaming.com/panduan/anime-ongoing-terbaik)
+- [Cara memilih anime berdasarkan genre](https://anistreaming.com/panduan/cara-memilih-anime)
 - [FAQ](https://anistreaming.com/faq)
 - [About AniStream](https://anistreaming.com/about)
 - [Contact](https://anistreaming.com/contact): contact@anistreaming.com
@@ -19,3 +26,5 @@
 - Anime details and episode links may be sourced from third parties.
 - AniStream does not host video files.
 - Contact: [contact@anistreaming.com](mailto:contact@anistreaming.com)
+- XML sitemap index: [sitemap.xml](https://anistreaming.com/sitemap.xml)
+- Individual anime pages contain synopsis, genres, metadata, episode links, and breadcrumb navigation.

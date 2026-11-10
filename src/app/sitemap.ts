@@ -21,10 +21,11 @@ type PaginatedResponse = {
 export const dynamic = "force-dynamic";
 
 const API_CACHE_SECONDS = 3600;
-const API_REQUEST_TIMEOUT_MS = 3000;
-const GENERATION_TIMEOUT_MS = 4000;
+const API_REQUEST_TIMEOUT_MS = 6000;
 const MAX_SITEMAP_URLS = 50000;
-const CATALOG_ENDPOINTS = ["/new-anime", "/order-anime/latest-added"];
+const CATALOG_ENDPOINT = "/new-anime";
+const PAGES_PER_SITEMAP = 4;
+const FALLBACK_TOTAL_PAGES = 1;
 const STATIC_ROUTES = [
   { path: "", priority: 1, changeFrequency: "daily" as const },
   { path: "/latest", priority: 0.8, changeFrequency: "hourly" as const },
@@ -41,6 +42,10 @@ const STATIC_ROUTES = [
   { path: "/category/completed", priority: 0.6, changeFrequency: "weekly" as const },
   { path: "/faq", priority: 0.3, changeFrequency: "monthly" as const },
   { path: "/artikel", priority: 0.5, changeFrequency: "daily" as const },
+  { path: "/panduan", priority: 0.8, changeFrequency: "daily" as const },
+  { path: "/panduan/anime-terbaru-sub-indo", priority: 0.7, changeFrequency: "weekly" as const },
+  { path: "/panduan/anime-ongoing-terbaik", priority: 0.7, changeFrequency: "weekly" as const },
+  { path: "/panduan/cara-memilih-anime", priority: 0.7, changeFrequency: "weekly" as const },
   { path: "/about", priority: 0.2, changeFrequency: "yearly" as const },
   { path: "/contact", priority: 0.2, changeFrequency: "yearly" as const },
   { path: "/terms", priority: 0.1, changeFrequency: "yearly" as const },
@@ -96,18 +101,30 @@ async function fetchPage(endpoint: string, page: number, deadline: number) {
   }
 }
 
-async function getAnimeUrls(deadline: number) {
+async function getAnimeUrls(pageStart: number, pageEnd: number) {
   const slugs = new Set<string>();
   const modified = new Map<string, Date>();
+  const deadline = Date.now() + 30000;
 
-  // Include the first page from each feed; pagination and episode expansion
-  // would make each sitemap request unbounded on a large catalog.
-  const firstPages = await Promise.all(
-    CATALOG_ENDPOINTS.map(endpoint => fetchPage(endpoint, 1, deadline)),
-  );
-  firstPages.forEach(page => addSlugs(page, slugs, modified));
+  // Fetch small batches to avoid overwhelming the upstream API while still
+  // covering every page assigned to this sitemap document.
+  for (let batchStart = pageStart; batchStart <= pageEnd; batchStart += 4) {
+    const batchEnd = Math.min(batchStart + 3, pageEnd);
+    const pages = await Promise.all(
+      Array.from({ length: batchEnd - batchStart + 1 }, (_, index) =>
+        fetchPage(CATALOG_ENDPOINT, batchStart + index, deadline),
+      ),
+    );
+    pages.forEach(page => addSlugs(page, slugs, modified));
+    if (Date.now() >= deadline) break;
+  }
 
   return { slugs: [...slugs], modified };
+}
+
+async function getCatalogPageCount() {
+  const page = await fetchPage(CATALOG_ENDPOINT, 1, Date.now() + API_REQUEST_TIMEOUT_MS);
+  return Math.max(FALLBACK_TOTAL_PAGES, Number(page?.total_page) || FALLBACK_TOTAL_PAGES);
 }
 
 async function getCollectionUrls(deadline: number) {
@@ -147,21 +164,29 @@ async function getCollectionUrls(deadline: number) {
   return urls;
 }
 
-export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
+export async function generateSitemaps() {
+  const totalPages = await getCatalogPageCount();
+  const sitemapCount = Math.ceil(totalPages / PAGES_PER_SITEMAP);
+  return Array.from({ length: sitemapCount }, (_, id) => ({ id }));
+}
+
+export default async function sitemap({ id }: { id: number }): Promise<MetadataRoute.Sitemap> {
+  const sitemapId = Number(id) || 0;
+  const pageStart = sitemapId * PAGES_PER_SITEMAP + 1;
+  const pageEnd = pageStart + PAGES_PER_SITEMAP - 1;
   const now = new Date();
-  const deadline = Date.now() + GENERATION_TIMEOUT_MS;
   const [{ slugs, modified }, collectionUrls, articles] = await Promise.all([
-    getAnimeUrls(deadline),
-    getCollectionUrls(deadline),
-    getPublishedArticles(100).catch(() => []),
+    getAnimeUrls(pageStart, pageEnd),
+    sitemapId === 0 ? getCollectionUrls(Date.now() + API_REQUEST_TIMEOUT_MS + 1000) : Promise.resolve([]),
+    sitemapId === 0 ? getPublishedArticles(100).catch(() => []) : Promise.resolve([]),
   ]);
   const entries = [
-    ...STATIC_ROUTES.map(route => ({
+    ...(sitemapId === 0 ? STATIC_ROUTES.map(route => ({
       url: `${SITE_URL}${route.path}`,
       lastModified: now,
       priority: route.priority,
       changeFrequency: route.changeFrequency,
-    })),
+    })) : []),
     ...slugs.map(slug => ({
       url: `${SITE_URL}/anime/${encodeURIComponent(slug)}`,
       lastModified: modified.get(slug) ?? now,
@@ -177,7 +202,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     })),
   ];
 
-  // Deduplicate overlapping catalogs and stay within the sitemap protocol's
-  // 50,000-URL limit.
+  // Deduplicate overlapping catalog results and stay within protocol limits.
   return [...new Map(entries.map(entry => [entry.url, entry])).values()].slice(0, MAX_SITEMAP_URLS);
 }

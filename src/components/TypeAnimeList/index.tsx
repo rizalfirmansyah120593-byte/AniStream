@@ -194,6 +194,8 @@ const TypeAnimeList = (props: TypeAnimeListProps) => {
                         onError={(event) => { event.currentTarget.src = '/not_found.png'; }}
                         fill
                         quality={65}
+                        loading={index < 2 ? "eager" : "lazy"}
+                        fetchPriority={index < 2 ? "high" : "auto"}
                         sizes="(max-width: 480px) 44vw, (max-width: 768px) 30vw, (max-width: 1280px) 19vw, 15vw"
                         className="object-cover transform group-hover:scale-105 transition-transform duration-500"
                       />
