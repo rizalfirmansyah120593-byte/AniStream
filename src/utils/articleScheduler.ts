@@ -20,6 +20,7 @@ async function runDueSlot() {
   if (process.env.ARTICLE_AUTOPUBLISH_ENABLED !== "true" || !process.env.OPENAI_API_KEY) return;
 
   try {
+    console.info("[article-scheduler] Checking article slot");
     await ensureArticleSchema();
     await runArticleGeneration();
   } catch (error) {

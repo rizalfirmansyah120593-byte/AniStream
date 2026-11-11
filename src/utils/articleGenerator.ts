@@ -293,7 +293,11 @@ function makeSlotKey(date = new Date()) {
 
 export async function runArticleGeneration() {
   const slotKey = makeSlotKey();
-  if (!(await beginArticleRun(slotKey))) return;
+  if (!(await beginArticleRun(slotKey))) {
+    console.info(`[article-scheduler] Slot ${slotKey} is already claimed or completed`);
+    return;
+  }
+  console.info(`[article-scheduler] Starting article generation for slot ${slotKey}`);
 
   try {
     const candidates = (await getTrendingAnime()).slice(0, MAX_CANDIDATES_PER_RUN);

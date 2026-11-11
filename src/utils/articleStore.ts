@@ -122,7 +122,7 @@ export async function beginArticleRun(slotKey: string) {
      SET status = 'running', detail = NULL, started_at = CURRENT_TIMESTAMP, finished_at = NULL
      WHERE slot_key = ? AND (
        status IN ('failed', 'skipped') OR
-       (status = 'running' AND started_at < UTC_TIMESTAMP() - INTERVAL 20 MINUTE)
+       (status = 'running' AND started_at < UTC_TIMESTAMP() - INTERVAL 12 MINUTE)
      )`,
     [slotKey],
   );
