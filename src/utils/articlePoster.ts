@@ -17,7 +17,7 @@ export async function resolveArticlePoster(article: PublishedArticle): Promise<P
 
   try {
     const response = await fetch(`${API_URL}/detail-anime/${encodeURIComponent(article.animeSlug)}`, {
-      signal: AbortSignal.timeout(4000),
+      headers: { Accept: "application/json" },
       next: { revalidate: 86400 },
     });
     if (!response.ok) return { ...article, posterUrl: null };
