@@ -19,6 +19,14 @@ type CatalogEntry = {
   released?: string;
 };
 
+type ArticleCandidate = {
+  trendKey: string;
+  query: string;
+  traffic: string;
+  animeSlug: string;
+  source: "google-trends" | "anime-catalog";
+};
+
 type AnimeFacts = {
   title: string;
   genres: string[];
@@ -40,7 +48,8 @@ type ArticleDraft = {
 
 const TRENDS_URL = "https://trends.google.com/trending/rss?geo=ID";
 const MAX_ARTICLE_CHARS = 8000;
-const MIN_ARTICLE_CHARS = 1600;
+const MIN_ARTICLE_CHARS = 1200;
+const MAX_CANDIDATES_PER_RUN = 5;
 
 function slugFromEntry(entry: CatalogEntry) {
   const raw = entry.slug || entry.detail_url || entry.link || "";
@@ -82,33 +91,52 @@ async function fetchJson(url: string, timeoutMs = 5000) {
   return response.json();
 }
 
-async function getTrendingAnime() {
+async function getTrendingAnime(): Promise<ArticleCandidate[]> {
   const [feedResult, newResult, popularResult] = await Promise.allSettled([
     fetch(TRENDS_URL, { signal: AbortSignal.timeout(6000), cache: "no-store" }),
     fetchJson(`${API_URL}/new-anime?page=1`),
     fetchJson(`${API_URL}/order-anime/popular?page=1`),
   ]);
-  if (feedResult.status !== "fulfilled" || !feedResult.value.ok) {
-    throw new Error(`Google Trends RSS is unavailable${feedResult.status === "fulfilled" ? ` (${feedResult.value.status})` : ""}`);
-  }
-  const xml = await feedResult.value.text();
-  const trendItems = parseTrendFeed(xml);
   const catalogEntries = [
-    ...(newResult.status === "fulfilled" ? newResult.value?.data || [] : []),
     ...(popularResult.status === "fulfilled" ? popularResult.value?.data || [] : []),
+    ...(newResult.status === "fulfilled" ? newResult.value?.data || [] : []),
   ] as CatalogEntry[];
-  if (!catalogEntries.length) throw new Error("Anime catalog is unavailable");
-  const candidates = trendItems.flatMap(trend => {
-    const match = catalogEntries
-      .map(entry => ({ entry, score: trendMatchScore(trend.query, String(entry.title || "")) }))
-      .filter(candidate => candidate.score >= 0.7)
-      .sort((a, b) => b.score - a.score)[0];
-    if (!match) return [];
-    const animeSlug = slugFromEntry(match.entry);
-    return animeSlug ? [{ trend, animeSlug, catalogTitle: String(match.entry.title || "") }] : [];
-  });
+  const uniqueCatalog = [...new Map(catalogEntries
+    .map(entry => [slugFromEntry(entry), entry] as const)
+    .filter(([slug]) => Boolean(slug))).values()];
+  if (!uniqueCatalog.length) throw new Error("Anime catalog is unavailable");
 
-  return candidates.sort((a, b) => Number(b.trend.traffic.replace(/[^\d]/g, "")) - Number(a.trend.traffic.replace(/[^\d]/g, "")));
+  if (feedResult.status === "fulfilled" && feedResult.value.ok) {
+    const trendItems = parseTrendFeed(await feedResult.value.text());
+    const candidates = trendItems.flatMap(trend => {
+      const match = uniqueCatalog
+        .map(entry => ({ entry, score: trendMatchScore(trend.query, String(entry.title || "")) }))
+        .filter(candidate => candidate.score >= 0.7)
+        .sort((a, b) => b.score - a.score)[0];
+      if (!match) return [];
+      const animeSlug = slugFromEntry(match.entry);
+      const trendKey = `trend:${normalize(trend.query)}`.slice(0, 191);
+      return animeSlug ? [{ trendKey, query: trend.query, traffic: trend.traffic, animeSlug, source: "google-trends" as const }] : [];
+    });
+    if (candidates.length) {
+      return candidates.sort((a, b) => Number(b.traffic.replace(/[^\d]/g, "")) - Number(a.traffic.replace(/[^\d]/g, "")));
+    }
+    console.warn("[article-scheduler] No anime matched current Google Trends; using unique catalog topics");
+  } else {
+    console.warn("[article-scheduler] Google Trends feed unavailable; using unique catalog topics");
+  }
+
+  return uniqueCatalog.slice(0, 12).flatMap(entry => {
+    const animeSlug = slugFromEntry(entry);
+    if (!animeSlug || !entry.title) return [];
+    return [{
+      trendKey: `catalog:${normalize(animeSlug)}`.slice(0, 191),
+      query: String(entry.title).trim(),
+      traffic: "Katalog AniStream",
+      animeSlug,
+      source: "anime-catalog" as const,
+    }];
+  });
 }
 
 async function getAnimeFacts(slug: string): Promise<AnimeFacts> {
@@ -143,7 +171,7 @@ const responseSchema = {
     excerpt: { type: "string" },
     sections: {
       type: "array",
-      minItems: 4,
+      minItems: 3,
       maxItems: 6,
       items: {
         type: "object",
@@ -151,7 +179,7 @@ const responseSchema = {
         required: ["heading", "paragraphs"],
         properties: {
           heading: { type: "string" },
-          paragraphs: { type: "array", minItems: 2, maxItems: 3, items: { type: "string" } },
+          paragraphs: { type: "array", minItems: 1, maxItems: 3, items: { type: "string" } },
         },
       },
     },
@@ -166,7 +194,7 @@ function parseDraft(value: string): ArticleDraft {
   if (typeof draft.excerpt !== "string" || draft.excerpt.trim().length < 80 || draft.excerpt.length > 320) {
     throw new Error("Generated article excerpt failed validation");
   }
-  if (!Array.isArray(draft.sections) || draft.sections.length < 4 || draft.sections.length > 6) {
+  if (!Array.isArray(draft.sections) || draft.sections.length < 3 || draft.sections.length > 6) {
     throw new Error("Generated article sections failed validation");
   }
 
@@ -178,7 +206,7 @@ function parseDraft(value: string): ArticleDraft {
   }));
   const contentLength = cleanedSections.reduce((length, section) =>
     length + section.heading.length + section.paragraphs.join(" ").length, 0);
-  if (cleanedSections.some(section => section.heading.length < 5 || section.paragraphs.length < 2 || section.paragraphs.some(paragraph => paragraph.length < 70 || paragraph.length > 1200))) {
+  if (cleanedSections.some(section => section.heading.length < 3 || section.paragraphs.length < 1 || section.paragraphs.some(paragraph => paragraph.length < 50 || paragraph.length > 1600))) {
     throw new Error("Generated article paragraphs failed validation");
   }
   if (contentLength < MIN_ARTICLE_CHARS || contentLength > MAX_ARTICLE_CHARS) {
@@ -196,7 +224,7 @@ function extractOutputText(response: { output?: Array<{ content?: Array<{ type?:
   return { text, citations };
 }
 
-async function generateDraft(query: string, traffic: string, facts: AnimeFacts, animeSlug: string) {
+async function generateDraft(query: string, traffic: string, facts: AnimeFacts, animeSlug: string, source: ArticleCandidate["source"]) {
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) throw new Error("OPENAI_API_KEY is not configured");
 
@@ -206,7 +234,7 @@ async function generateDraft(query: string, traffic: string, facts: AnimeFacts, 
     body: JSON.stringify({
       model: process.env.OPENAI_ARTICLE_MODEL || "gpt-6-astra",
       tools: [{ type: "web_search" }],
-      max_output_tokens: 2400,
+      max_output_tokens: 3200,
       text: {
         format: {
           type: "json_schema",
@@ -216,13 +244,15 @@ async function generateDraft(query: string, traffic: string, facts: AnimeFacts, 
         },
       },
       instructions: [
-        "Tulis artikel orisinal berbahasa Indonesia untuk pembaca AniStream, bukan halaman SEO doorway.",
-        "Gunakan web search untuk memverifikasi konteks tren terkini dan fakta anime. Utamakan sumber resmi/primer.",
-        "Data Google Trends hanya menunjukkan pencarian yang sedang naik; jangan menyebutnya bukti popularitas umum atau mengarang alasan tren.",
-        "Fakta anime yang diizinkan hanya data katalog yang diberikan. Jangan menyalin atau merekonstruksi sinopsis, dialog, lirik, atau artikel sumber.",
-        "Jangan menebak tanggal tayang, plot, pemeran, studio, ketersediaan streaming, atau angka pencarian yang tidak tercantum pada sumber.",
-        "Buat 4-6 bagian yang benar-benar membantu pembaca memahami tren, konteks yang dapat diverifikasi, dan informasi katalog. Hindari pengulangan kata kunci.",
-        "Jangan sertakan URL atau daftar sumber dalam teks; tautan sitasi terverifikasi akan ditampilkan terpisah.",
+        "Tulis artikel orisinal dan berguna dalam bahasa Indonesia, bukan doorway SEO atau parafrasa artikel lain.",
+        source === "google-trends"
+          ? "Topik berasal dari sinyal Google Trends; jelaskan dengan hati-hati dan jangan mengarang alasan pencarian meningkat."
+          : "Topik dipilih dari katalog anime AniStream karena feed tren tidak tersedia atau tidak memiliki kecocokan anime. Jangan menyebutnya sedang tren atau populer berdasarkan pencarian.",
+        "Gunakan web search untuk memverifikasi sedikitnya satu fakta kontekstual yang relevan. Utamakan situs resmi anime, penerbit, atau studio dan cantumkan sitasi.",
+        "Metadata katalog adalah sumber fakta anime yang diizinkan. Jangan menyalin atau merekonstruksi sinopsis, dialog, lirik, atau artikel sumber.",
+        "Jangan menebak tanggal tayang, plot, pemeran, studio, ketersediaan streaming, angka pencarian, atau fakta yang tidak ditemukan.",
+        "Buat 3-5 bagian substantif; setiap bagian berisi 1-2 paragraf yang jelas dan tidak berulang. Targetkan 1200-4500 karakter isi. Hindari keyword stuffing.",
+        "Jangan sertakan URL atau daftar sumber dalam teks; sitasi web terverifikasi ditampilkan terpisah.",
       ].join(" "),
       input: JSON.stringify({
         trendQuery: query,
@@ -251,8 +281,7 @@ async function generateDraft(query: string, traffic: string, facts: AnimeFacts, 
       continue;
     }
   }
-  const citedHosts = new Set(citations.map(source => new URL(source.url).hostname.replace(/^www\./, "")));
-  if (citedHosts.size < 2) throw new Error("Article requires citations from at least two independent web sources");
+  if (citations.length === 0) throw new Error("Article requires at least one verifiable web citation");
 
   return { draft, citations };
 }
@@ -267,46 +296,55 @@ export async function runArticleGeneration() {
   if (!(await beginArticleRun(slotKey))) return;
 
   try {
-    const candidates = await getTrendingAnime();
+    const candidates = (await getTrendingAnime()).slice(0, MAX_CANDIDATES_PER_RUN);
     for (const candidate of candidates) {
-      const trendKey = normalize(candidate.trend.query).slice(0, 191);
-      if (!trendKey || await hasArticleForTrend(trendKey)) continue;
-
-      let facts: AnimeFacts;
       try {
-        facts = await getAnimeFacts(candidate.animeSlug);
-      } catch {
-        continue;
-      }
-      if (trendMatchScore(candidate.trend.query, facts.title) < 0.7) continue;
+        if (await hasArticleForTrend(candidate.trendKey)) continue;
 
-      const { draft, citations } = await generateDraft(candidate.trend.query, candidate.trend.traffic, facts, candidate.animeSlug);
-      const article: PublishedArticle = {
-        slug: slugify(draft.title),
-        trendKey,
-        trendKeyword: candidate.trend.query,
-        trendTraffic: candidate.trend.traffic,
-        title: draft.title,
-        excerpt: draft.excerpt,
-        animeSlug: candidate.animeSlug,
-        sections: draft.sections,
-        sources: [
-          { title: "Google Trends — Penelusuran Indonesia", url: TRENDS_URL },
-          { title: `Data katalog AniStream: ${facts.title}`, url: `${SITE_URL}/anime/${encodeURIComponent(candidate.animeSlug)}` },
-          ...citations,
-        ],
-        publishedAt: new Date().toISOString(),
-      };
-      if (!article.slug || !(await saveArticle(article))) {
-        await finishArticleRun(slotKey, "skipped", "Topik tren atau slug sudah pernah diterbitkan");
+        const facts = await getAnimeFacts(candidate.animeSlug);
+        if (candidate.source === "google-trends" && trendMatchScore(candidate.query, facts.title) < 0.7) continue;
+
+        const { draft, citations } = await generateDraft(
+          candidate.query,
+          candidate.traffic,
+          facts,
+          candidate.animeSlug,
+          candidate.source,
+        );
+        const article: PublishedArticle = {
+          slug: slugify(draft.title),
+          trendKey: candidate.trendKey,
+          trendKeyword: candidate.query,
+          trendTraffic: candidate.traffic,
+          title: draft.title,
+          excerpt: draft.excerpt,
+          animeSlug: candidate.animeSlug,
+          sections: draft.sections,
+          sources: [
+            ...(candidate.source === "google-trends"
+              ? [{ title: "Google Trends — Penelusuran Indonesia", url: TRENDS_URL }]
+              : []),
+            { title: `Data katalog AniStream: ${facts.title}`, url: `${SITE_URL}/anime/${encodeURIComponent(candidate.animeSlug)}` },
+            ...citations,
+          ],
+          publishedAt: new Date().toISOString(),
+        };
+        if (!article.slug || !(await saveArticle(article))) {
+          console.warn(`[article-scheduler] Candidate skipped because its article slug already exists: ${candidate.animeSlug}`);
+          continue;
+        }
+
+        await finishArticleRun(slotKey, "published", article.slug);
+        console.info(`[article-scheduler] Published ${article.slug} from ${candidate.source}: ${candidate.query}`);
         return;
+      } catch (error) {
+        const reason = error instanceof Error ? error.message : "Unknown candidate error";
+        console.warn(`[article-scheduler] Candidate skipped (${candidate.source}: ${candidate.animeSlug}): ${reason}`);
       }
-      await finishArticleRun(slotKey, "published", article.slug);
-      console.info(`[article-scheduler] Published ${article.slug} for trend: ${candidate.trend.query}`);
-      return;
     }
 
-    await finishArticleRun(slotKey, "skipped", "Tidak ada topik anime tren yang memenuhi ambang kualitas dan keunikan");
+    await finishArticleRun(slotKey, "skipped", "No unique anime topic produced an article that passed factuality and content-quality checks");
+    console.warn(`[article-scheduler] Slot ${slotKey} finished without a publishable article`);
   } catch (error) {
     const detail = error instanceof Error ? error.message : "Unknown article generation error";
     await finishArticleRun(slotKey, "failed", detail).catch(() => undefined);

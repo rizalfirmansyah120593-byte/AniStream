@@ -49,7 +49,7 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
       <JsonLd data={schema} />
       <article className="mx-auto max-w-3xl">
         <Link href="/artikel" className="text-sm text-red-400 hover:text-red-300">← Semua artikel</Link>
-        <p className="mt-6 text-sm text-gray-400">Topik tren: {article.trendKeyword} · {new Intl.DateTimeFormat("id-ID", { dateStyle: "long", timeZone: "UTC" }).format(new Date(article.publishedAt))}</p>
+        <p className="mt-6 text-sm text-gray-400">{article.trendTraffic === "Katalog AniStream" ? "Topik katalog" : "Topik tren"}: {article.trendKeyword} · {new Intl.DateTimeFormat("id-ID", { dateStyle: "long", timeZone: "UTC" }).format(new Date(article.publishedAt))}</p>
         <h1 className="mt-3 text-3xl font-bold md:text-4xl">{article.title}</h1>
         <p className="mt-5 text-lg leading-8 text-gray-300">{article.excerpt}</p>
         <div className="mt-10 space-y-8">

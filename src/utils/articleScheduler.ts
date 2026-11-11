@@ -1,9 +1,7 @@
 import { ensureArticleSchema } from "@/utils/articleStore";
 import { runArticleGeneration } from "@/utils/articleGenerator";
 
-const TICK_MS = 60_000;
 const STARTUP_GRACE_MS = 10_000;
-const MAX_SLOT_DELAY_MS = 12 * 60_000;
 
 function nextTwoHourSlotDelay(now: Date) {
   const next = new Date(now);
@@ -20,9 +18,6 @@ function nextTwoHourSlotDelay(now: Date) {
 
 async function runDueSlot() {
   if (process.env.ARTICLE_AUTOPUBLISH_ENABLED !== "true" || !process.env.OPENAI_API_KEY) return;
-
-  const now = new Date();
-  if (now.getUTCMinutes() > MAX_SLOT_DELAY_MS / 60_000) return;
 
   try {
     await ensureArticleSchema();
@@ -48,14 +43,12 @@ export function startArticleScheduler() {
   globalState.__anistreamArticleScheduler = true;
 
   const scheduleNext = () => {
-    const timer = setTimeout(() => {
-      void runDueSlot().finally(() => {
-        setInterval(() => void runDueSlot(), TICK_MS);
-      });
+    setTimeout(async () => {
+      await runDueSlot();
+      scheduleNext();
     }, nextTwoHourSlotDelay(new Date()));
-    timer.unref?.();
   };
 
   scheduleNext();
-  console.info("[article-scheduler] Enabled; checking UTC two-hour slots");
+  console.info("[article-scheduler] Enabled; next run is at the next even UTC hour");
 }

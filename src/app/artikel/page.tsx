@@ -5,7 +5,7 @@ import { SITE_URL } from "@/utils/config";
 
 export const metadata: Metadata = {
   title: "Artikel Anime dan Tren Terbaru",
-  description: "Artikel AniStream tentang tren anime yang terverifikasi, informasi katalog, dan panduan untuk penggemar anime Indonesia.",
+  description: "Artikel AniStream tentang topik anime dari sinyal pencarian dan informasi katalog yang terverifikasi.",
   alternates: { canonical: `${SITE_URL}/artikel` },
 };
 
