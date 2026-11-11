@@ -3,16 +3,28 @@ import { runArticleGeneration } from "@/utils/articleGenerator";
 
 const TICK_MS = 60_000;
 const STARTUP_GRACE_MS = 10_000;
-const MAX_SLOT_DELAY_MINUTES = 12;
+const MAX_SLOT_DELAY_MS = 12 * 60_000;
 
-async function runDueSlot(force = false) {
+function nextTwoHourSlotDelay(now: Date) {
+  const next = new Date(now);
+  next.setUTCMinutes(0, 0, 0);
+  const nextEvenHour = Math.ceil((now.getUTCHours() + 0.001) / 2) * 2;
+  if (nextEvenHour >= 24) {
+    next.setUTCDate(next.getUTCDate() + 1);
+    next.setUTCHours(0);
+  } else {
+    next.setUTCHours(nextEvenHour);
+  }
+  return Math.max(STARTUP_GRACE_MS, next.getTime() - now.getTime());
+}
+
+async function runDueSlot() {
   if (process.env.ARTICLE_AUTOPUBLISH_ENABLED !== "true" || !process.env.OPENAI_API_KEY) return;
 
   const now = new Date();
-  if (!force && now.getUTCMinutes() > MAX_SLOT_DELAY_MINUTES) return;
+  if (now.getUTCMinutes() > MAX_SLOT_DELAY_MS / 60_000) return;
 
   try {
-    console.info(`[article-scheduler] Starting ${force ? "startup recovery" : "scheduled slot"} at ${now.toISOString()}`);
     await ensureArticleSchema();
     await runArticleGeneration();
   } catch (error) {
@@ -23,7 +35,7 @@ async function runDueSlot(force = false) {
 export function startArticleScheduler() {
   if (process.env.NEXT_PHASE === "phase-production-build") return;
   if (process.env.ARTICLE_AUTOPUBLISH_ENABLED !== "true") {
-    console.info("[article-scheduler] Disabled; ARTICLE_AUTOPUBLISH_ENABLED is not true");
+    console.info("[article-scheduler] Disabled; set ARTICLE_AUTOPUBLISH_ENABLED=true to enable");
     return;
   }
   if (!process.env.OPENAI_API_KEY) {
@@ -35,9 +47,15 @@ export function startArticleScheduler() {
   if (globalState.__anistreamArticleScheduler) return;
   globalState.__anistreamArticleScheduler = true;
 
-  setTimeout(() => {
-    void runDueSlot(true);
-    setInterval(() => void runDueSlot(), TICK_MS);
-  }, STARTUP_GRACE_MS);
-  console.info("[article-scheduler] Enabled; running once after startup and checking every two-hour UTC slot");
+  const scheduleNext = () => {
+    const timer = setTimeout(() => {
+      void runDueSlot().finally(() => {
+        setInterval(() => void runDueSlot(), TICK_MS);
+      });
+    }, nextTwoHourSlotDelay(new Date()));
+    timer.unref?.();
+  };
+
+  scheduleNext();
+  console.info("[article-scheduler] Enabled; checking UTC two-hour slots");
 }
