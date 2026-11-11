@@ -334,7 +334,7 @@ async function generateDraft(
         },
       },
       instructions: [
-        "Tulis artikel orisinal berbahasa Indonesia untuk pembaca AniStream, bukan halaman SEO doorway.",
+        "Tulis artikel orisinal berbahasa Indonesia untuk pembaca AniStream, bukan halaman SEO doorway. Gunakan nada hangat, natural, informatif, dan profesional; jelaskan istilah yang mungkin asing agar pembaca baru tetap nyaman mengikuti pembahasan.",
         "Gunakan web search untuk memverifikasi setiap klaim terkini. Utamakan situs resmi anime, penerbit, distributor, broadcaster, atau pengumuman produksi; gunakan media tepercaya sebagai konfirmasi independen.",
         formatInstructions[format],
         source === "google-trends"
@@ -345,7 +345,7 @@ async function generateDraft(
         "Fakta anime yang diizinkan hanya data katalog yang diberikan. Jangan menyalin atau merekonstruksi sinopsis, dialog, lirik, atau artikel sumber.",
         "Jangan menebak tanggal/jam tayang, plot, urutan franchise, pemeran, studio, rating, jumlah episode, ketersediaan streaming, atau angka pencarian. Pisahkan fakta sumber dari analisis/opini.",
         "Buat judul dan heading yang menjawab search intent, gunakan keyword utama sewajarnya pada judul, pembuka, dan satu heading tanpa keyword stuffing. Tulis jawaban ringkas dan langsung di awal agar mudah dipahami pembaca dan answer engine.",
-        "Buat 4-6 bagian substantif yang benar-benar membantu pembaca, memakai detail spesifik yang terverifikasi dan informasi katalog. Hindari pengulangan, paragraf pengisi, klaim superlatif tanpa bukti, dan konten tipis.",
+        "Buat 4-6 bagian substantif yang benar-benar membantu pembaca, memakai detail spesifik yang terverifikasi dan informasi katalog. Sertakan konteks, poin penting yang perlu diketahui, serta saran praktis bagi pembaca bila relevan. Hindari pengulangan, paragraf pengisi, klaim superlatif tanpa bukti, dan konten tipis.",
         "Tambahkan bagian tanggal pembaruan bila membahas jadwal atau tren yang cepat berubah. Jangan mengklaim artikel diperbarui di tanggal lain.",
         "Jangan sertakan URL atau daftar sumber dalam teks; tautan sitasi terverifikasi akan ditampilkan terpisah.",
       ].join(" "),
