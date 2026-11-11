@@ -49,6 +49,9 @@ export function startArticleScheduler() {
     }, nextTwoHourSlotDelay(new Date()));
   };
 
-  scheduleNext();
-  console.info("[article-scheduler] Enabled; next run is at the next even UTC hour");
+  setTimeout(async () => {
+    await runDueSlot();
+    scheduleNext();
+  }, STARTUP_GRACE_MS);
+  console.info("[article-scheduler] Enabled; checking the current slot on startup and then every two hours");
 }
