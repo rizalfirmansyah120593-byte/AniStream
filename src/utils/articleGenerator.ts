@@ -30,6 +30,7 @@ type ArticleCandidate = {
 
 type AnimeFacts = {
   title: string;
+  posterUrl: string | null;
   genres: string[];
   season: string;
   type: string;
@@ -158,9 +159,16 @@ async function getAnimeFacts(slug: string): Promise<AnimeFacts> {
   const studio = String(anime.studio || (Array.isArray(anime.studios) ? anime.studios.join(", ") : "") || "").trim();
   const knownFactCount = [genres.length > 0, rating.length > 0, totalEpisodes.length > 0, season.length > 0, type.length > 0, year.length > 0, status.length > 0, studio.length > 0].filter(Boolean).length;
   const title = String(anime.title || "").trim();
+  let posterUrl: string | null = null;
+  try {
+    const candidate = new URL(String(anime.img || anime.poster || ""));
+    if (candidate.protocol === "https:" || candidate.protocol === "http:") posterUrl = candidate.toString();
+  } catch {
+    posterUrl = null;
+  }
 
   if (!title || knownFactCount < 3) throw new Error("Anime metadata does not meet the publication quality threshold");
-  return { title, genres, season, type, year, status, studio, rating, totalEpisodes, latestEpisode };
+  return { title, posterUrl, genres, season, type, year, status, studio, rating, totalEpisodes, latestEpisode };
 }
 
 const responseSchema = {
@@ -328,6 +336,7 @@ export async function runArticleGeneration() {
           title: draft.title,
           excerpt: draft.excerpt,
           animeSlug: candidate.animeSlug,
+          posterUrl: facts.posterUrl,
           sections: draft.sections,
           sources: [
             ...(candidate.source === "google-trends"

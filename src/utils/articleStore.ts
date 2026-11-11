@@ -18,6 +18,7 @@ export type PublishedArticle = {
   title: string;
   excerpt: string;
   animeSlug: string;
+  posterUrl: string | null;
   sections: ArticleSection[];
   sources: ArticleSource[];
   publishedAt: string;
@@ -63,6 +64,7 @@ export async function ensureArticleSchema() {
         title VARCHAR(180) NOT NULL,
         excerpt VARCHAR(320) NOT NULL,
         anime_slug VARCHAR(180) NOT NULL,
+        poster_url VARCHAR(2048) NULL,
         sections_json JSON NOT NULL,
         sources_json JSON NOT NULL,
         published_at DATETIME NOT NULL,
@@ -70,6 +72,12 @@ export async function ensureArticleSchema() {
         INDEX articles_published_idx (published_at)
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
     `);
+    const [posterColumns] = await connection.execute(
+      "SELECT 1 FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'articles' AND COLUMN_NAME = 'poster_url' LIMIT 1",
+    );
+    if ((posterColumns as unknown[]).length === 0) {
+      await connection.execute("ALTER TABLE articles ADD COLUMN poster_url VARCHAR(2048) NULL AFTER anime_slug");
+    }
     await connection.execute(`
       CREATE TABLE IF NOT EXISTS article_generation_runs (
         slot_key VARCHAR(16) NOT NULL PRIMARY KEY,
@@ -102,6 +110,7 @@ function mapArticle(row: Record<string, unknown>): PublishedArticle {
     title: String(row.title),
     excerpt: String(row.excerpt),
     animeSlug: String(row.anime_slug),
+    posterUrl: row.poster_url ? String(row.poster_url) : null,
     sections: decodeJson<ArticleSection[]>(row.sections_json as ArticleSection[] | string),
     sources: decodeJson<ArticleSource[]>(row.sources_json as ArticleSource[] | string),
     publishedAt,
@@ -163,8 +172,8 @@ export async function saveArticle(article: PublishedArticle) {
   await ensureArticleSchema();
   const [result] = await getPool().execute(
     `INSERT IGNORE INTO articles
-      (slug, trend_key, trend_keyword, trend_traffic, title, excerpt, anime_slug, sections_json, sources_json, published_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      (slug, trend_key, trend_keyword, trend_traffic, title, excerpt, anime_slug, poster_url, sections_json, sources_json, published_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       article.slug,
       article.trendKey,
@@ -173,6 +182,7 @@ export async function saveArticle(article: PublishedArticle) {
       article.title,
       article.excerpt,
       article.animeSlug,
+      article.posterUrl,
       JSON.stringify(article.sections),
       JSON.stringify(article.sources),
       new Date(article.publishedAt),
