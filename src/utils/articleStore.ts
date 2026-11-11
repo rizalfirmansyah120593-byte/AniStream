@@ -150,6 +150,15 @@ export async function hasArticleForTrend(trendKey: string) {
   return (rows as unknown[]).length > 0;
 }
 
+export async function hasArticleForAnime(animeSlug: string) {
+  await ensureArticleSchema();
+  const [rows] = await getPool().execute(
+    "SELECT 1 FROM articles WHERE anime_slug = ? LIMIT 1",
+    [animeSlug],
+  );
+  return (rows as unknown[]).length > 0;
+}
+
 export async function saveArticle(article: PublishedArticle) {
   await ensureArticleSchema();
   const [result] = await getPool().execute(

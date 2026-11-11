@@ -4,6 +4,7 @@ import {
   beginArticleRun,
   finishArticleRun,
   hasArticleForTrend,
+  hasArticleForAnime,
   saveArticle,
   type ArticleSection,
   type ArticleSource,
@@ -233,7 +234,7 @@ async function generateDraft(query: string, traffic: string, facts: AnimeFacts, 
     headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
     body: JSON.stringify({
       model: process.env.OPENAI_ARTICLE_MODEL || "gpt-6-astra",
-      tools: [{ type: "web_search" }],
+      ...(source === "google-trends" ? { tools: [{ type: "web_search" }] } : {}),
       max_output_tokens: 3200,
       text: {
         format: {
@@ -248,11 +249,12 @@ async function generateDraft(query: string, traffic: string, facts: AnimeFacts, 
         source === "google-trends"
           ? "Topik berasal dari sinyal Google Trends; jelaskan dengan hati-hati dan jangan mengarang alasan pencarian meningkat."
           : "Topik dipilih dari katalog anime AniStream karena feed tren tidak tersedia atau tidak memiliki kecocokan anime. Jangan menyebutnya sedang tren atau populer berdasarkan pencarian.",
-        "Gunakan web search untuk memverifikasi sedikitnya satu fakta kontekstual yang relevan. Utamakan situs resmi anime, penerbit, atau studio dan cantumkan sitasi.",
-        "Metadata katalog adalah sumber fakta anime yang diizinkan. Jangan menyalin atau merekonstruksi sinopsis, dialog, lirik, atau artikel sumber.",
-        "Jangan menebak tanggal tayang, plot, pemeran, studio, ketersediaan streaming, angka pencarian, atau fakta yang tidak ditemukan.",
-        "Buat 3-5 bagian substantif; setiap bagian berisi 1-2 paragraf yang jelas dan tidak berulang. Targetkan 1200-4500 karakter isi. Hindari keyword stuffing.",
-        "Jangan sertakan URL atau daftar sumber dalam teks; sitasi web terverifikasi ditampilkan terpisah.",
+        source === "google-trends"
+          ? "Gunakan web search untuk memverifikasi sedikitnya satu fakta kontekstual. Utamakan situs resmi anime, penerbit, atau studio dan cantumkan sitasi."
+          : "Untuk topik katalog, gunakan hanya fakta metadata yang diberikan. Jangan mengarang berita, tren, plot, tanggal, studio, pemeran, atau ketersediaan streaming. Jelaskan keterbatasan metadata dengan jujur.",
+        "Jangan menyalin atau merekonstruksi sinopsis, dialog, lirik, atau artikel sumber.",
+        "Buat 3-5 bagian substantif; setiap bagian berisi 1-2 paragraf jelas dan tidak berulang. Targetkan 1200-4500 karakter isi. Hindari keyword stuffing dan kalimat pengisi.",
+        "Jangan sertakan URL atau daftar sumber dalam teks; sumber terverifikasi ditampilkan terpisah.",
       ].join(" "),
       input: JSON.stringify({
         trendQuery: query,
@@ -281,7 +283,9 @@ async function generateDraft(query: string, traffic: string, facts: AnimeFacts, 
       continue;
     }
   }
-  if (citations.length === 0) throw new Error("Article requires at least one verifiable web citation");
+  if (source === "google-trends" && citations.length === 0) {
+    throw new Error("Trend article requires at least one verifiable web citation");
+  }
 
   return { draft, citations };
 }
@@ -304,6 +308,7 @@ export async function runArticleGeneration() {
     for (const candidate of candidates) {
       try {
         if (await hasArticleForTrend(candidate.trendKey)) continue;
+        if (candidate.source === "anime-catalog" && await hasArticleForAnime(candidate.animeSlug)) continue;
 
         const facts = await getAnimeFacts(candidate.animeSlug);
         if (candidate.source === "google-trends" && trendMatchScore(candidate.query, facts.title) < 0.7) continue;
