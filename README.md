@@ -67,3 +67,17 @@ curl -X POST https://anistreaming.com/api/indexnow \
 ```
 
 Integrate this call into the successful publish transaction (not a page visit). Submit `https://anistreaming.com/sitemap.xml` once in Google Search Console and Bing Webmaster Tools, then inspect representative anime and episode URLs. Check: HTTP 200, one canonical URL, indexable robots meta, unique title/description, valid JSON-LD, and visible internal links.
+
+## Social publishing
+
+The `Publish social content` GitHub Actions workflow generates up to three Indonesian captions per day from the latest articles on AniStreaming and Filmanesia. It uses the official Meta Graph API to publish link posts to the two Pages and keeps a small deduplication state in `data/social-posted.json`.
+
+Configure these repository secrets before enabling the schedule:
+
+- `OPENAI_API_KEY`
+- `META_PAGE_ID_ANISTREAMING`
+- `META_PAGE_ACCESS_TOKEN_ANISTREAMING`
+- `META_PAGE_ID_FILMANESIA`
+- `META_PAGE_ACCESS_TOKEN_FILMANESIA`
+
+Set the repository variable `SOCIAL_AUTOPUBLISH_ENABLED` to `true` only after running the workflow manually with `dry_run=true`. The workflow publishes link posts only; use images or video only when you have documented rights to the media.
