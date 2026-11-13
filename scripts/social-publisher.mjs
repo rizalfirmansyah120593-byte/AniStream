@@ -54,12 +54,17 @@ function normalizeArticle(article, source) {
 }
 
 async function loadArticles(source) {
-  const payload = await getJson(source.articlesUrl);
-  const items = Array.isArray(payload) ? payload : payload.items || payload.articles || [];
-  return items
-    .map(item => normalizeArticle(item, source))
-    .filter(Boolean)
-    .sort((a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime());
+  try {
+    const payload = await getJson(source.articlesUrl);
+    const items = Array.isArray(payload) ? payload : payload.items || payload.articles || [];
+    return items
+      .map(item => normalizeArticle(item, source))
+      .filter(Boolean)
+      .sort((a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime());
+  } catch (error) {
+    console.warn(`[social-publisher] Skipping unavailable ${source.label} feed: ${error.message}`);
+    return [];
+  }
 }
 
 async function loadTrends() {
